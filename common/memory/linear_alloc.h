@@ -1,3 +1,5 @@
+#ifndef LINEAR_ALLOC_H
+#define LINEAR_ALLOC_H
 #include "common.h"
 
 typedef struct Arena Arena;
@@ -15,10 +17,6 @@ struct Temp_Arena_Memory {
     size_t curr_offset;
 };
 
-
-#ifndef DEFAULT_ALIGNMENT
-#define DEFAULT_ALIGNMENT (2 * sizeof(void *))
-#endif
 
 // #define LINEAR_ALLOCATOR_UNIT_TESTS
 
@@ -211,4 +209,5 @@ temp_arena_memory_end(Temp_Arena_Memory temp)
     temp.arena->prev_offset = temp.prev_offset;
     temp.arena->curr_offset = temp.curr_offset;
 }
+#endif
 #endif
