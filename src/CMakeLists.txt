@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.0)
 
-project(scratch_pad)
+project(scratch_pad C)
 
 include(../cmake_macros/prac.cmake)
 

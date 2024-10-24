@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.22.0)
 
-project(scratch_pad CXX C)
+project(scratch_pad C)
 
 set(EXTERN_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external)
 
-set(CMAKE_CXX_STANDARD 20) # this does nothing for MSVC, use target_compile_options below
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
+# set(CMAKE_CXX_STANDARD 20) # this does nothing for MSVC, use target_compile_options below
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_EXTENSIONS ON)
 
 # Definitions
 if(WIN32)
@@ -67,6 +67,12 @@ include_directories(common)
 # set_property(TARGET glfw            PROPERTY FOLDER "ThirdPartyLibraries")
 # set_property(TARGET glad            PROPERTY FOLDER "ThirdPartyLibraries")
 # set_property(TARGET assimp          PROPERTY FOLDER "ThirdPartyLibraries")
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
+    COMMAND ${CMAKE_CXX_COMPILER} /EP ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp > ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+)
 
 
 # Include Common SharedUtils

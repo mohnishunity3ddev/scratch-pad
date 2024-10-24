@@ -1,5 +1,5 @@
 {
-    "editor.fontFamily": "'maple mono nf', 'sf mono', 'caskaydiacove nf mono', 'comic code ligatures regular', 'RecMonoCasual Nerd Font Mono', 'pragmatapro mono liga', 'sf mono', 'ZedMono NFM', 'UbuntuSansMono NFM', 'iosevkaterm nerd font mono', 'jetbrainsmono nf', 'agave nerd font mono r', 'JetBrainsMono nerd font mono'",
+    "editor.fontFamily": "'maple mono nf', 'comic code ligatures semibold', 'sf mono', 'caskaydiacove nf mono', 'RecMonoCasual Nerd Font Mono', 'pragmatapro mono liga', 'sf mono', 'ZedMono NFM', 'UbuntuSansMono NFM', 'iosevkaterm nerd font mono', 'jetbrainsmono nf', 'agave nerd font mono r', 'JetBrainsMono nerd font mono'",
     "editor.fontSize": 16,
     // "editor.lineHeight": 25,
     // "editor.letterSpacing": 0.5,
@@ -137,7 +137,8 @@
         "matrixfunctions": "cpp",
         "coroutine": "cpp",
         "resumable": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "stdbool.h": "c"
     },
     "files.trimTrailingWhitespace": true,
     "editor.renderLineHighlight": "all",
