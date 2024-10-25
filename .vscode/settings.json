@@ -1,6 +1,7 @@
 {
-    "editor.fontFamily": "'maple mono nf', 'comic code ligatures semibold', 'sf mono', 'caskaydiacove nf mono', 'RecMonoCasual Nerd Font Mono', 'pragmatapro mono liga', 'sf mono', 'ZedMono NFM', 'UbuntuSansMono NFM', 'iosevkaterm nerd font mono', 'jetbrainsmono nf', 'agave nerd font mono r', 'JetBrainsMono nerd font mono'",
+    "editor.fontFamily": "'caskaydiacove nf mono', 'pragmatapro mono liga', 'comic code ligatures semibold', 'maple mono nf', 'sf mono', 'RecMonoCasual Nerd Font Mono', 'sf mono', 'ZedMono NFM', 'UbuntuSansMono NFM', 'iosevkaterm nerd font mono', 'jetbrainsmono nf', 'agave nerd font mono r', 'JetBrainsMono nerd font mono'",
     "editor.fontSize": 16,
+
     // "editor.lineHeight": 25,
     // "editor.letterSpacing": 0.5,
     "editor.fontLigatures": true,

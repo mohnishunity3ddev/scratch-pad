@@ -184,7 +184,7 @@ stack_alloc_test()
     for (unsigned char i = 0; i < 4; ++i)
         arr1[i] = i * 3 + 1;
     assert((size_t)arr1 % DEFAULT_ALIGNMENT == 0);
-
+    
     unsigned char *arr2 = alloc_struct(unsigned char, 16);
     for (unsigned char i = 0; i < 16; ++i)
         arr2[i] = i;
@@ -206,7 +206,7 @@ stack_alloc_test()
     for (unsigned char i = 0; i < 6; ++i)
         arr3[i] = i;
     assert((size_t)arr3 % DEFAULT_ALIGNMENT == 0);
-    
+
     stack_free_all(&stack);
     arr2 = alloc_struct(unsigned char, 16);
     for (unsigned char i = 0; i < 16; ++i)
@@ -219,7 +219,7 @@ stack_alloc_test()
 #undef alloc_struct
 #undef realloc_struct
 }
-
 #endif
+
 #endif
 #endif

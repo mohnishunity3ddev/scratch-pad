@@ -39,6 +39,8 @@ align_forward(uintptr_t ptr, size_t align)
     return p;
 }
 
+
+
 size_t
 calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
 {
