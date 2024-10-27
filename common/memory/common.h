@@ -45,7 +45,7 @@ size_t
 calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
 {
     uintptr_t p, a, modulo, padding;
-    assert(is_power_of_2(alignment));
+    // assert(is_power_of_2(alignment));
     // Example: if header_size is 38, and padding for ptr to be aligned is 5(say)
     // then extra space needed is 38-5 = 33, alignment should be on 16 byte boundary(say)
     // so we need 33 bytes more to be aligned.
@@ -54,7 +54,7 @@ calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
 
     p = ptr;
     a = alignment;
-    modulo = p & (a - 1); // p % a (a is a power of 2)
+    modulo = is_power_of_2(alignment) ? (p & (a - 1)) : (p % a); // p % a (a is a power of 2)
 
     padding = 0;
     if (modulo != 0)

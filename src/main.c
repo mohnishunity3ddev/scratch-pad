@@ -8,12 +8,16 @@
 // #define STACK_ALLOCATOR_IMPLEMENTATION
 // #define STACK_ALLOCATOR_UNIT_TEST
 // #include <memory/stack_alloc_forward.h>
-#define POOL_ALLOCATOR_IMPLEMENTATION
-#define POOL_ALLOCATOR_UNIT_TEST
-#include <memory/pool_alloc.h>
+// #define POOL_ALLOCATOR_IMPLEMENTATION
+// #define POOL_ALLOCATOR_UNIT_TEST
+// #include <memory/pool_alloc.h>
+#include <stdio.h>
+#define FREELIST_ALLOCATOR_IMPLEMENTATION
+#define FREELIST_ALLOCATOR_UNIT_TESTS
+#include <memory/freelist_alloc.h>
 
 int
 main()
 {
-    pool_alloc_test();
+    freelist_tests();
 }
