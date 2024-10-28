@@ -2,6 +2,7 @@
 #define FREELIST_ALLOC_H
 
 #include "common.h"
+
 typedef struct Freelist_Allocation_Header Freelist_Allocation_Header;
 struct Freelist_Allocation_Header {
     /// @brief this includes required size, size for header and size for alignment padding.
@@ -22,47 +23,75 @@ typedef enum Placement_Policy {
 } Placement_Policy;
 
 typedef struct Freelist Freelist;
+
+void  freelist_init(Freelist *fl, void *data, size_t size, size_t alignment);
+void *freelist_alloc(void *fl, size_t size);
+void *freelist_alloc_align(void *fl, size_t size, size_t alignment);
+void  freelist_free(void *fl, void *ptr);
+void *freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment);
+void  freelist_free_all(void *fl);
+size_t freelist_remaining_space(Freelist *fl);
+
 struct Freelist {
+    alloc_api api;
+
     void *data;
     size_t size;
     size_t used;
     Freelist_Node *head;
+
     Placement_Policy policy;
     int block_count;
 };
 
-void  freelist_init(Freelist *fl, void *data, size_t size);
-void *freelist_alloc(Freelist *fl, size_t size, size_t alignment);
-void  freelist_free(Freelist *fl, void *ptr);
-void *freelist_realloc(Freelist *fl, void *ptr, size_t new_size, size_t alignment);
-void  freelist_free_all(Freelist *fl);
-
 #ifdef FREELIST_ALLOCATOR_UNIT_TESTS
-void freelist_tests();
+void freelist_unit_tests();
 #endif
 
 #ifdef FREELIST_ALLOCATOR_IMPLEMENTATION
 void  freelist_node_insert(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *new_node);
 void  freelist_node_remove(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *del_node);
-void *freelist_realloc_sized(Freelist *fl, void *ptr, size_t old_size, size_t new_size, size_t alignment);
+void *freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, size_t alignment);
 
-void
-freelist_free_all(Freelist *fl)
+size_t
+freelist_remaining_space(Freelist *fl)
 {
-    fl->used = 0;
-    Freelist_Node *first_node = (Freelist_Node *)fl->data;
-    first_node->block_size = fl->size;
-    first_node->next = NULL;
-    fl->head = first_node;
-    fl->block_count = 1;
+    Freelist_Node *curr = fl->head;
+    size_t space = 0;
+    while (curr != NULL) {
+        space += curr->block_size;
+        curr = curr->next;
+    }
+    return space;
 }
 
 void
-freelist_init(Freelist *fl, void *data, size_t size)
+freelist_free_all(void *fl)
+{
+    Freelist *freelist = (Freelist *)fl;
+    freelist->used = 0;
+    Freelist_Node *first_node = (Freelist_Node *)freelist->data;
+    first_node->block_size = freelist->size;
+    first_node->next = NULL;
+    freelist->head = first_node;
+    freelist->block_count = 1;
+}
+
+void
+freelist_init(Freelist *fl, void *data, size_t size, size_t alignment)
 {
     fl->data = data;
     fl->size = size;
     freelist_free_all(fl);
+
+    fl->api.alloc = freelist_alloc;
+    fl->api.alloc_align = freelist_alloc_align;
+    fl->api.realloc_align = freelist_realloc;
+    fl->api.free = freelist_free;
+    fl->api.free_all = freelist_free_all;
+
+    fl->api.alignment = alignment;
+    fl->api.allocator = (void *)fl;
 }
 
 Freelist_Node *
@@ -120,8 +149,17 @@ freelist_find_best(Freelist *fl, size_t size, size_t alignment, size_t *padding_
 }
 
 void *
-freelist_alloc(Freelist *fl, size_t size, size_t alignment)
+freelist_alloc(void *fl, size_t size)
 {
+    return freelist_alloc_align(fl, size, DEFAULT_ALIGNMENT);
+}
+
+void *
+freelist_alloc_align(void *fl, size_t size, size_t alignment)
+{
+    assert(fl != NULL);
+    Freelist *freelist = (Freelist *)fl;
+
     size_t padding = 0;
     Freelist_Node *prev_node = NULL;
     Freelist_Node *node = NULL;
@@ -130,13 +168,15 @@ freelist_alloc(Freelist *fl, size_t size, size_t alignment)
     Freelist_Allocation_Header *header_ptr;
     size_t header_size = sizeof(Freelist_Allocation_Header);
 
+    // we have to save info about the free node which this alloc will be when we free it. So we need enough space
+    // to store free_node info.
     if (size < sizeof(Freelist_Node)) size = sizeof(Freelist_Node);
     if (alignment < 8) alignment = 8;
 
-    if (fl->policy == PLACEMENT_POLICY_FIND_BEST) {
-        node = freelist_find_best(fl, size, alignment, &padding, &prev_node);
-    } else if (fl->policy == PLACEMENT_POLICY_FIND_FIRST) {
-        node = freelist_find_first(fl, size, alignment, &padding, &prev_node);
+    if (freelist->policy == PLACEMENT_POLICY_FIND_BEST) {
+        node = freelist_find_best(freelist, size, alignment, &padding, &prev_node);
+    } else if (freelist->policy == PLACEMENT_POLICY_FIND_FIRST) {
+        node = freelist_find_first(freelist, size, alignment, &padding, &prev_node);
     } else {
         assert(0 && "No Valid placement policy set!");
     }
@@ -158,19 +198,19 @@ freelist_alloc(Freelist *fl, size_t size, size_t alignment)
         if (remaining > header_size) {
             Freelist_Node *new_node = (Freelist_Node *)((char *)node + required_space);
             new_node->block_size = remaining;
-            freelist_node_insert(fl, node, new_node);
+            freelist_node_insert(freelist, node, new_node);
         } else {
             required_space += remaining;
         }
     }
 
-    freelist_node_remove(fl, prev_node, node);
+    freelist_node_remove(freelist, prev_node, node);
 
     header_ptr = (Freelist_Allocation_Header *)((char *)node + alignment_padding);
     header_ptr->block_size = required_space;
     header_ptr->alignment_padding = alignment_padding;
 
-    fl->used += required_space;
+    freelist->used += required_space;
 
     void *memory = (void *)((char *)header_ptr + header_size);
     return memory;
@@ -179,8 +219,11 @@ freelist_alloc(Freelist *fl, size_t size, size_t alignment)
 void freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free_node);
 
 void
-freelist_free(Freelist *fl, void *ptr)
+freelist_free(void *fl, void *ptr)
 {
+    assert(fl != NULL && ptr != NULL);
+    Freelist *freelist = (Freelist *)fl;
+
     Freelist_Allocation_Header *header;
     Freelist_Node *free_node, *node, *prev_node = NULL;
 
@@ -194,19 +237,19 @@ freelist_free(Freelist *fl, void *ptr)
     free_node = (Freelist_Node *)((char *)header - header->alignment_padding);
     free_node->block_size = header->block_size;
     free_node->next = NULL;
-    assert(fl->used >= free_node->block_size);
 
-    node = fl->head;
+    node = freelist->head;
     while (node != NULL) {
         if (ptr < (void *)node) {
-            freelist_node_insert(fl, prev_node, free_node);
+            freelist_node_insert(freelist, prev_node, free_node);
             break;
         }
         prev_node = node;
         node = node->next;
     }
-    fl->used -= free_node->block_size;
-    freelist_coalescence(fl, prev_node, free_node);
+    assert(freelist->used >= free_node->block_size);
+    freelist->used -= free_node->block_size;
+    freelist_coalescence(freelist, prev_node, free_node);
 }
 
 void
@@ -231,82 +274,144 @@ freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free
 }
 
 void *
-freelist_realloc(Freelist *fl, void *ptr, size_t new_size, size_t alignment)
+freelist_realloc(void *fl, void *ptr, size_t size, size_t alignment)
 {
-    assert(ptr != NULL);
+    assert(fl != NULL);
+    if (ptr == NULL) {
+        // should behave like alloc.
+        return freelist_alloc_align(fl, size, alignment);
+    }
+    if (size == 0) {
+        freelist_free(fl, ptr);
+        return NULL;
+    }
+
+    if ((uintptr_t)ptr % alignment != 0) {
+        printf("Misaligned memory!\n");
+        return NULL;
+    }
+    Freelist *freelist = (Freelist *)fl;
+    if ((uintptr_t)ptr < (uintptr_t)(freelist->data) ||
+        (uintptr_t)ptr > ((uintptr_t)freelist->data + (uintptr_t)freelist->size))
+    {
+        printf("Out of Bounds Memory Access!\n");
+        return NULL;
+    }
     size_t header_size = sizeof(Freelist_Allocation_Header);
     Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((char *)ptr - header_size);
-
     size_t header_align_padding = header_size + header->alignment_padding;
     size_t old_size             = header->block_size - header_align_padding;
-    new_size                    = (new_size > header_size) ? new_size : header_size;
+    if (old_size == size) {
+        return ptr;
+    }
+    assert(freelist_remaining_space(freelist) >= sizeof(Freelist_Allocation_Header));
+    if (size > (freelist_remaining_space(freelist) - sizeof(Freelist_Allocation_Header))) {
+        printf("Not enough space in the backing buffer!\n");
+        return NULL;
+    }
 
-    return freelist_realloc_sized(fl, ptr, old_size, new_size, alignment);
+    void *new_ptr = freelist_realloc_sized(fl, ptr, old_size, size, alignment);
+
+    assert((freelist_remaining_space(freelist) + freelist->used) == freelist->size);
+    return new_ptr;
 }
 
 void *
-freelist_realloc_sized(Freelist *fl, void *ptr, size_t old_size, size_t new_size, size_t alignment)
+freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, size_t alignment)
 {
     assert(fl != NULL && ptr != NULL);
 
-    if (old_size == new_size) {
-        return ptr;
-    }
-
-    Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((char *)ptr -
-                                                                        sizeof(Freelist_Allocation_Header));
-
+    Freelist *freelist = (Freelist *)fl;
+    Freelist_Allocation_Header *alloc_header = (Freelist_Allocation_Header *)((char *)ptr -
+                                                                              sizeof(Freelist_Allocation_Header));
     if (old_size < new_size)
     {
-        const size_t extra_space = new_size - old_size;
-
-        for (Freelist_Node *curr = fl->head, *prev = NULL;
+        size_t extra_space = new_size - old_size;
+        for (Freelist_Node *curr = freelist->head, *prev = NULL;
              curr != NULL;
              prev = curr, curr = curr->next)
         {
             if ((uintptr_t)curr == ((uintptr_t)ptr + old_size) &&
-                curr->block_size >= extra_space)
+                (curr->block_size >= extra_space))
             {
-                header->block_size += extra_space;
-
                 const size_t remaining = curr->block_size - extra_space;
                 if (remaining >= sizeof(Freelist_Allocation_Header))
                 {
                     Freelist_Node *new_node = (Freelist_Node *)((char *)curr + extra_space);
                     new_node->next = curr->next;
                     new_node->block_size = remaining;
-
                     if (prev) {
                         prev->next = new_node;
                     } else {
-                        fl->head = new_node;
+                        freelist->head = new_node;
                     }
                 } else {
-                    freelist_node_remove(fl, prev, curr);
+                    // remaining size in the free block is too small to even store freeblock metadata. Add it to
+                    // the current allocation and remove the whole free block from the freelist.
+                    extra_space += remaining;
+                    freelist_node_remove(freelist, prev, curr);
                 }
+                alloc_header->block_size += extra_space;
+                freelist->used += extra_space;
                 return ptr;
             }
         }
 
-        void *new_ptr = freelist_alloc(fl, new_size, alignment);
+        void *new_ptr = freelist_alloc_align(freelist, new_size, alignment);
         if (new_ptr) {
             memcpy(new_ptr, ptr, old_size);
-            freelist_free(fl, ptr);
+            freelist_free(freelist, ptr);
             return new_ptr;
         }
         return NULL;
     }
 
+    assert(old_size > new_size);
     const size_t free_space = old_size - new_size;
-    assert(free_space < sizeof(Freelist_Allocation_Header));
 
-    header->block_size = new_size;
+    if (free_space < sizeof(Freelist_Node)) {
+        // cannot make a free node just containing free_space.
+        // checking if there is a free block immediately after old allocation.
+        Freelist_Node *curr = freelist->head;
+        Freelist_Node *prev = NULL;
+        while (curr != NULL && (uintptr_t)curr < (uintptr_t)ptr) {
+            prev = curr;
+            curr = curr->next;
+        }
+        char *addr_after_allocation = (char *)ptr + old_size;
+        if ((uintptr_t)curr == (uintptr_t)(addr_after_allocation)) {
+            // lining up
+            size_t new_block_size = curr->block_size + free_space;
+            Freelist_Node *new_node = (Freelist_Node *)(addr_after_allocation - free_space);
+            new_node->next = curr->next;
+            new_node->block_size = new_block_size;
+            if (prev) {
+                prev->next = new_node;
+            } else {
+                freelist->head = new_node;
+            }
+            assert(freelist->used > free_space);
+            freelist->used -= free_space;
+            assert(alloc_header->block_size > free_space);
+            alloc_header->block_size -= free_space;
+        } else {
+            // DO NOTHING. can't save an isolated block which has less size than what is required to store free
+            // block metadata.
+        }
+        return ptr;
+    }
+
+    assert(alloc_header->block_size > free_space);
+    alloc_header->block_size -= free_space;
 
     Freelist_Node *new_node = (Freelist_Node *)((char *)ptr + new_size);
     new_node->block_size = free_space;
     new_node->next = NULL;
 
-    Freelist_Node *curr = fl->head;
+    assert(freelist->used >= free_space);
+    freelist->used -= free_space;
+
+    Freelist_Node *curr = freelist->head;
     Freelist_Node *prev = NULL;
 
     while (curr && (uintptr_t)curr < (uintptr_t)new_node) {
@@ -314,20 +419,20 @@ freelist_realloc_sized(Freelist *fl, void *ptr, size_t old_size, size_t new_size
         curr = curr->next;
     }
 
-    freelist_node_insert(fl, prev, new_node);
+    freelist_node_insert(freelist, prev, new_node);
 
     if (new_node->next &&
         (char *)new_node + new_node->block_size == (char *)new_node->next)
     {
         new_node->block_size += new_node->next->block_size;
-        freelist_node_remove(fl, new_node, new_node->next);
+        freelist_node_remove(freelist, new_node, new_node->next);
     }
 
     if (prev &&
         (char *)prev + prev->block_size == (char *)new_node)
     {
         prev->block_size += new_node->block_size;
-        freelist_node_remove(fl, prev, new_node);
+        freelist_node_remove(freelist, prev, new_node);
     }
 
     return ptr;
@@ -369,6 +474,15 @@ freelist_node_remove(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *del_
 }
 
 #ifdef FREELIST_ALLOCATOR_UNIT_TESTS
+static void
+freelist_test_initial_state(Freelist *fl)
+{
+    assert(fl->head == fl->data);
+    assert(fl->block_count == 1);
+    assert(fl->used == 0);
+    assert(fl->head->block_size == fl->size);
+}
+
 static void
 verify_freelist_blocks(Freelist *fl, size_t *exp_free_sizes, int exp_block_count, bool print_block_size)
 {
@@ -434,6 +548,278 @@ validate_freelist_memory(Freelist *fl, void *base_addr, size_t total_size)
     validate_used_memory(fl, base_addr, total_size);
 }
 
+
+void
+freelist_realloc_tests()
+{
+    printf("Running realloc tests ...\n");
+
+    // Initialize with 1MB of memory
+    const size_t mem_size = 1024 * 1024;
+    void *memory = malloc(mem_size);
+    assert(memory != NULL);
+
+    Freelist fl;
+    fl.policy = PLACEMENT_POLICY_FIND_BEST;
+    freelist_init(&fl, memory, mem_size, DEFAULT_ALIGNMENT);
+    alloc_api *api = &fl.api;
+
+    printf("1. Shrink down realloc test...\n");
+    {
+        size_t old_p1_size = 128;
+        unsigned char *p1 = (unsigned char *)freelist_alloc(&fl, old_p1_size);
+        size_t u1 = fl.used;
+        for (unsigned char i = 0; i < 128; ++i) {
+            p1[i] = i;
+        }
+        unsigned char *p2 = (unsigned char *)freelist_alloc(&fl, 256);
+        size_t u2 = fl.used - u1;
+        for (unsigned char i = 0; i < 255; ++i) {
+            p2[i] = i;
+        }
+        unsigned char *p3 = (unsigned char *)freelist_alloc(&fl, 32);
+        size_t u3 = fl.used - (u1+u2);
+        for (unsigned char i = 0; i < 32; ++i) {
+            p3[i] = i;
+        }
+        freelist_free(&fl, p2); p2 = NULL;
+        uintptr_t old_head = (uintptr_t)fl.head;
+        size_t new_p1_size = 120;
+        unsigned char *new_p1 = (unsigned char *)freelist_realloc(&fl, p1, new_p1_size, DEFAULT_ALIGNMENT);
+        uintptr_t new_head = (uintptr_t)fl.head;
+        size_t p1_shrink_size = old_p1_size - new_p1_size;
+        assert(old_head > new_head && (new_head + p1_shrink_size) == old_head);
+        for (int i = 0; i < new_p1_size; ++i) {
+            assert(p1[i] == i);
+        }
+        assert((uintptr_t)p1 == (uintptr_t)new_p1);
+        Freelist_Node *first_free_node = fl.head;
+        assert(first_free_node->block_size == u2+8);
+        freelist_free(&fl, p1);
+        freelist_free(&fl, p3);
+        freelist_test_initial_state(&fl);
+
+        unsigned char *ptr1 = (unsigned char *)freelist_alloc(&fl, 128);
+        for (unsigned char i = 0; i < 128; ++i) {
+            ptr1[i] = (i+1);
+        }
+
+        unsigned char *ptr2 = (unsigned char *)freelist_alloc(&fl, 512);
+        memset(ptr2, 0x0a, 512);
+
+        ptr1 = (unsigned char *)freelist_realloc(&fl, ptr1, 64, api->alignment);
+        for (unsigned char i = 0; i < 64; ++i) {
+            assert(ptr1[i] == (i+1));
+        }
+
+        assert(freelist_remaining_space(&fl) + fl.used == fl.size);
+        freelist_free(&fl, ptr1);
+        freelist_free(&fl, ptr2);
+        freelist_test_initial_state(&fl);
+    }
+
+    printf("2. Basic realloc tests...\n");
+    {
+        // Test growing allocation
+        void *ptr1 = freelist_alloc(&fl, 128);
+        assert(ptr1 != NULL);
+        memset(ptr1, 0xAA, 128);
+
+        size_t used_before = fl.used;
+        void *ptr2 = freelist_realloc(&fl, ptr1, 256, api->alignment);
+        assert(ptr2 != NULL);
+        // Verify content was preserved
+        for (size_t i = 0; i < 128; i++) {
+            assert(((unsigned char*)ptr2)[i] == 0xAA);
+        }
+        assert(fl.used >= used_before);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        // Test shrinking allocation
+        used_before = fl.used;
+        ptr1 = freelist_realloc(&fl, ptr2, 64, api->alignment);
+        assert(ptr1 != NULL);
+        // Verify content was preserved
+        for (size_t i = 0; i < 64; i++) {
+            assert(((unsigned char*)ptr1)[i] == 0xAA);
+        }
+        assert(fl.used <= used_before);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        freelist_free(&fl, ptr1);
+        freelist_test_initial_state(&fl);
+    }
+
+    printf("3. Edge case tests...\n");
+    {
+        // NULL ptr (should behave like alloc)
+        void *ptr1 = freelist_realloc(&fl, NULL, 128, api->alignment);
+        assert(ptr1 != NULL);
+        memset(ptr1, 0xBB, 128);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        // size 0 (should behave like free)
+        size_t used_before = fl.used;
+        void *ptr2 = freelist_realloc(&fl, ptr1, 0, api->alignment);
+        assert(ptr2 == NULL);
+        assert(fl.used < used_before);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        ptr1 = freelist_alloc(&fl, 256);
+        assert(ptr1 != NULL);
+        memset(ptr1, 0xCC, 256);
+        used_before = fl.used;
+        // with same size
+        ptr2 = freelist_realloc(&fl, ptr1, 256, api->alignment);
+        assert(ptr2 != NULL);
+        assert(fl.used == used_before);
+        for (size_t i = 0; i < 256; i++) {
+            assert(((unsigned char*)ptr2)[i] == 0xCC);
+        }
+        validate_freelist_memory(&fl, memory, mem_size);
+        freelist_free(&fl, ptr2);
+
+        freelist_test_initial_state(&fl);
+    }
+
+    printf("4. Mixed allocation pattern tests...\n");
+    {
+        void *ptrs[10] = {NULL};
+        size_t sizes[10] = {64, 128, 256, 512, 1024, 32, 96, 160, 384, 768};
+
+        // Allocate with varying sizes
+        for (int i = 0; i < 10; i++) {
+            ptrs[i] = freelist_alloc(&fl, sizes[i]);
+            assert(ptrs[i] != NULL);
+            memset(ptrs[i], i+1, sizes[i]);
+            validate_freelist_memory(&fl, memory, mem_size);
+        }
+
+        // Free some blocks to create holes
+        freelist_free(&fl, ptrs[1]); ptrs[1] = NULL;
+        freelist_free(&fl, ptrs[3]); ptrs[3] = NULL;
+        freelist_free(&fl, ptrs[5]); ptrs[5] = NULL;
+        freelist_free(&fl, ptrs[7]); ptrs[7] = NULL;
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        // Reallocate remaining blocks with various sizes
+        size_t new_sizes[10] = {32, 0, 512, 0, 2048, 0, 128, 0, 256, 1536};
+        for (int i = 0; i < 10; i++) {
+            if (ptrs[i] != NULL) {
+                void *new_ptr = freelist_realloc(&fl, ptrs[i], new_sizes[i], api->alignment);
+                if (new_sizes[i] > 0) {
+                    assert(new_ptr != NULL);
+                    ptrs[i] = new_ptr;
+                } else {
+                    assert(new_ptr == NULL);
+                    ptrs[i] = NULL;
+                }
+                validate_freelist_memory(&fl, memory, mem_size);
+            }
+        }
+
+        // Free remaining blocks
+        for (int i = 0; i < 10; i++) {
+            if (ptrs[i] != NULL) {
+                freelist_free(&fl, ptrs[i]);
+                validate_freelist_memory(&fl, memory, mem_size);
+            }
+        }
+
+        freelist_test_initial_state(&fl);
+    }
+
+    printf("5. Basic realloc alignment tests...\n");
+    {
+        const size_t alignments[] = {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+        void *ptrs[10] = {NULL};
+
+        // Test growing allocation with different alignments
+        for (int i = 0; i < 10; i++) {
+            ptrs[i] = freelist_realloc(&fl, NULL, 128, alignments[i]);
+            assert(ptrs[i] != NULL);
+            assert((uintptr_t)ptrs[i] % alignments[i] == 0);
+            memset(ptrs[i], 0xAA + i, 128);
+            validate_freelist_memory(&fl, memory, mem_size);
+        }
+
+        // Grow allocations while maintaining alignment
+        for (int i = 0; i < 10; i++) {
+            void *new_ptr = freelist_realloc(&fl, ptrs[i], 256, alignments[i]);
+            assert(new_ptr != NULL);
+            assert((uintptr_t)new_ptr % alignments[i] == 0);
+            // Verify content was preserved
+            for (size_t j = 0; j < 128; j++) {
+                assert(((unsigned char*)new_ptr)[j] == (0xAA + i));
+            }
+            ptrs[i] = new_ptr;
+            validate_freelist_memory(&fl, memory, mem_size);
+        }
+
+        // Shrink allocations with different alignments
+        for (int i = 0; i < 10; i++) {
+            void *new_ptr = freelist_realloc(&fl, ptrs[i], 64, alignments[i]);
+            assert(new_ptr != NULL);
+            assert((uintptr_t)new_ptr % alignments[i] == 0);
+            // Verify content was preserved
+            for (size_t j = 0; j < 64; j++) {
+                assert(((unsigned char*)new_ptr)[j] == (0xAA + i));
+            }
+            ptrs[i] = new_ptr;
+            validate_freelist_memory(&fl, memory, mem_size);
+        }
+
+        // Free all allocations
+        for (int i = 0; i < 10; i++) {
+            freelist_free(&fl, ptrs[i]);
+            validate_freelist_memory(&fl, memory, mem_size);
+        }
+
+        freelist_test_initial_state(&fl);
+    }
+
+    printf("6. Edge case alignment tests...\n");
+    {
+        // Test realloc with NULL pointer and alignment
+        void *ptr1 = freelist_realloc(&fl, NULL, 128, 4096);
+        assert(ptr1 != NULL);
+        assert((uintptr_t)ptr1 % 4096 == 0);
+        memset(ptr1, 0xDD, 128);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        // Test realloc with size 0 but large alignment
+        void *ptr2 = freelist_realloc(&fl, ptr1, 0, 4096);
+        assert(ptr2 == NULL);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        // Test realloc with same size but different alignment
+        ptr1 = freelist_realloc(&fl, NULL, 256, 64);
+        assert(ptr1 != NULL);
+        assert((uintptr_t)ptr1 % 64 == 0);
+        memset(ptr1, 0xEE, 256);
+
+        ptr2 = freelist_realloc(&fl, ptr1, 256, 128);
+        assert(ptr2 != NULL);
+        assert((uintptr_t)ptr2 % 128 == 0);
+        // Verify content
+        for (size_t i = 0; i < 256; i++) {
+            assert(((unsigned char*)ptr2)[i] == 0xEE);
+        }
+
+        freelist_free(&fl, ptr2);
+        validate_freelist_memory(&fl, memory, mem_size);
+
+        freelist_test_initial_state(&fl);
+    }
+
+    freelist_test_initial_state(&fl);
+    freelist_free_all(&fl);
+    freelist_test_initial_state(&fl);
+    free(memory);
+    printf("All realloc tests passed successfully!\n");
+}
+
+
 void
 freelist_alignment_tests()
 {
@@ -446,7 +832,7 @@ freelist_alignment_tests()
 
     Freelist fl;
     fl.policy = PLACEMENT_POLICY_FIND_BEST;
-    freelist_init(&fl, memory, mem_size);
+    freelist_init(&fl, memory, mem_size, DEFAULT_ALIGNMENT);
 
     // Verify initial state
     assert(fl.head != NULL);
@@ -476,7 +862,7 @@ freelist_alignment_tests()
             size_t alloc_size = 128;
 
             size_t used_before = fl.used;
-            ptrs[i] = freelist_alloc(&fl, alloc_size, alignment);
+            ptrs[i] = freelist_alloc_align(&fl, alloc_size, alignment);
             assert(ptrs[i] != NULL);
             assert((uintptr_t)ptrs[i] % alignment == 0);
 
@@ -547,7 +933,7 @@ freelist_alignment_tests()
             size_t alignment = test_cases[i].alignment;
 
             size_t used_before = fl.used;
-            ptrs[i] = freelist_alloc(&fl, alloc_size, alignment);
+            ptrs[i] = freelist_alloc_align(&fl, alloc_size, alignment);
             assert(ptrs[i] != NULL);
             assert((uintptr_t)ptrs[i] % alignment == 0);
 
@@ -614,7 +1000,7 @@ freelist_alignment_tests()
         const size_t max_alignment = 4096;
         size_t used_before = fl.used;
 
-        void *ptr1 = freelist_alloc(&fl, 1, max_alignment);
+        void *ptr1 = freelist_alloc_align(&fl, 1, max_alignment);
         assert(ptr1 != NULL);
         assert((uintptr_t)ptr1 % max_alignment == 0);
         Freelist_Allocation_Header *header1 = (Freelist_Allocation_Header *)((char *)ptr1 - header_size);
@@ -622,7 +1008,7 @@ freelist_alignment_tests()
         size_t actual_alloc1 = (header1->block_size - header1->alignment_padding - header_size);
         assert(actual_alloc1 == sizeof(Freelist_Node)); // Minimum allocation size
 
-        void *ptr2 = freelist_alloc(&fl, 1, 8);
+        void *ptr2 = freelist_alloc_align(&fl, 1, 8);
         assert(ptr2 != NULL);
         assert((uintptr_t)ptr2 % 8 == 0);
         Freelist_Allocation_Header *header2 = (Freelist_Allocation_Header *)((char *)ptr2 - header_size);
@@ -630,7 +1016,7 @@ freelist_alignment_tests()
         size_t actual_alloc2 = (header2->block_size - header2->alignment_padding - header_size);
         assert(actual_alloc2 == sizeof(Freelist_Node)); // Minimum allocation size
 
-        void *ptr3 = freelist_alloc(&fl, 1, max_alignment);
+        void *ptr3 = freelist_alloc_align(&fl, 1, max_alignment);
         assert(ptr3 != NULL);
         assert((uintptr_t)ptr3 % max_alignment == 0);
         Freelist_Allocation_Header *header3 = (Freelist_Allocation_Header *)((char *)ptr3 - header_size);
@@ -664,9 +1050,10 @@ freelist_alignment_tests()
 }
 
 void
-freelist_tests()
+freelist_unit_tests()
 {
     freelist_alignment_tests();
+    freelist_realloc_tests();
 }
 #endif
 #endif

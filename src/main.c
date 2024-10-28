@@ -15,9 +15,12 @@
 #define FREELIST_ALLOCATOR_IMPLEMENTATION
 #define FREELIST_ALLOCATOR_UNIT_TESTS
 #include <memory/freelist_alloc.h>
+#define STRING32_IMPLEMENTATION
+#define STRING32_UNIT_TESTS
+#include <containers/string_utils.h>
 
 int
 main()
 {
-    freelist_tests();
+    freelist_unit_tests();
 }

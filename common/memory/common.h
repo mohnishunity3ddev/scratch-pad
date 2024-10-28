@@ -12,6 +12,25 @@
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 #endif
 
+typedef void *(*alloc_fn)(void *allocator, size_t size);
+typedef void *(*alloc_align_fn)(void *allocator, size_t size, size_t alignment);
+typedef void *(*realloc_align_fn)(void *allocator, void *ptr, size_t new_size, size_t alignment);
+typedef void  (*free_fn)(void *allocator, void *ptr);
+typedef void  (*free_all_fn)(void *allocator);
+
+typedef struct alloc_api alloc_api;
+struct alloc_api
+{
+    alloc_fn          alloc;
+    alloc_align_fn    alloc_align;
+    realloc_align_fn  realloc_align;
+    free_fn           free;
+    free_all_fn       free_all;
+
+    void *allocator;
+    size_t alignment;
+};
+
 bool
 is_power_of_2(uintptr_t x)
 {
@@ -38,8 +57,6 @@ align_forward(uintptr_t ptr, size_t align)
 
     return p;
 }
-
-
 
 size_t
 calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
