@@ -1037,7 +1037,7 @@ freelist_fragmentation_tests()
 
     // Cleanup
     free(memory);
-    printf("fragmentation tests passed successfully!");
+    printf("fragmentation tests passed successfully!\n\n");
 }
 
 void

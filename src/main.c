@@ -23,4 +23,5 @@ int
 main()
 {
     freelist_unit_tests();
+    string32_unit_tests();
 }
