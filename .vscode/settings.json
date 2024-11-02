@@ -141,7 +141,8 @@
         "coroutine": "cpp",
         "resumable": "cpp",
         "typeindex": "cpp",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "freelist_alloc.h": "c"
     },
     "files.trimTrailingWhitespace": true,
     "editor.renderLineHighlight": "all",

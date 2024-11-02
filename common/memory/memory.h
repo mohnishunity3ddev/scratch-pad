@@ -1,12 +1,13 @@
-#ifndef MEMORY_COMMON_H
-#define MEMORY_COMMON_H
+#ifndef MEMORY_H
+#define MEMORY_H
 
 #include <assert.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 #ifndef DEFAULT_ALIGNMENT
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
@@ -15,17 +16,17 @@
 typedef void *(*alloc_fn)(void *allocator, size_t size);
 typedef void *(*alloc_align_fn)(void *allocator, size_t size, size_t alignment);
 typedef void *(*realloc_align_fn)(void *allocator, void *ptr, size_t new_size, size_t alignment);
-typedef void  (*free_fn)(void *allocator, void *ptr);
-typedef void  (*free_all_fn)(void *allocator);
+typedef void (*free_fn)(void *allocator, void *ptr);
+typedef void (*free_all_fn)(void *allocator);
 
 typedef struct alloc_api alloc_api;
 struct alloc_api
 {
-    alloc_fn          alloc;
-    alloc_align_fn    alloc_align;
-    realloc_align_fn  realloc_align;
-    free_fn           free;
-    free_all_fn       free_all;
+    alloc_fn alloc;
+    alloc_align_fn alloc_align;
+    realloc_align_fn realloc_align;
+    free_fn free;
+    free_all_fn free_all;
 
     void *allocator;
     size_t alignment;

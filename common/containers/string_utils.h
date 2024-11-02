@@ -1,7 +1,7 @@
 #ifndef STRING_UTILS_H
 #define STRING_UTILS_H
 
-#include "memory/common.h"
+#include "memory/memory.h"
 #include <stdio.h>
 
 static alloc_api *alloc_api_global = {NULL};

@@ -1,7 +1,7 @@
 #ifndef FREELIST_ALLOC_H
 #define FREELIST_ALLOC_H
 
-#include "common.h"
+#include "memory.h"
 
 typedef struct Freelist_Allocation_Header Freelist_Allocation_Header;
 struct Freelist_Allocation_Header {

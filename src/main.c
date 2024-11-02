@@ -18,10 +18,12 @@
 #define STRING32_IMPLEMENTATION
 #define STRING32_UNIT_TESTS
 #include <containers/string_utils.h>
+#define AVL_IMPLEMENTATION
+#define AVL_UNIT_TEST
+#include <containers/avl_tree.h>
 
 int
 main()
 {
-    freelist_unit_tests();
-    string32_unit_tests();
+    avl_test();
 }
