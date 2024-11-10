@@ -12,18 +12,25 @@
 // #define POOL_ALLOCATOR_UNIT_TEST
 // #include <memory/pool_alloc.h>
 #include <stdio.h>
-#define FREELIST_ALLOCATOR_IMPLEMENTATION
-#define FREELIST_ALLOCATOR_UNIT_TESTS
-#include <memory/freelist_alloc.h>
-#define STRING32_IMPLEMENTATION
-#define STRING32_UNIT_TESTS
-#include <containers/string_utils.h>
-#define AVL_IMPLEMENTATION
-#define AVL_UNIT_TEST
-#include <containers/avl_tree.h>
+
+#define QUEUE_IMPLEMENTATION
+#include <containers/queue.h>
+
+#define STACK_IMPLEMENTATION
+#include <containers/stack.h>
+
+#define DARR_IMPLEMENTATION
+#include <containers/darr.h>
+
+#define RBT_IMPLEMENTATION
+#define RBT_UNIT_TESTS
+#include <containers/rb_tree.h>
+
+// #define STRING32_IMPLEMENTATION
+// #include <containers/string_utils.h>
 
 int
 main()
 {
-    avl_test();
+    red_black_tree_test();
 }

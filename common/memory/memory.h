@@ -13,15 +13,22 @@
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 #endif
 
+#define shalloc_a(api,sz,a) (((api) != NULL) ? (api)->alloc_align((api)->allocator, (sz), (a)) : malloc((sz)))
+#define shalloc(api,sz) shalloc_a(api, sz, (api)->alignment)
+#define shrealloc_a(api,p,sz,a) (((api) != NULL) ? (api)->realloc_align((api)->allocator, (p), (sz), (a)) : realloc(p,sz))
+#define shrealloc(api,p,sz) shrealloc_a(api,p,sz,(api)->alignment)
+#define shfree(api,p) ((api) != NULL) ? (api)->free((api)->allocator,(p)) : free((p))
+#define shalloc_arr(api,t,c) (t *)shalloc((api),(c)*sizeof(t))
+#define shrealloc_arr(api,p,t,c) (t *)shrealloc((api),p,(c)*sizeof(t))
+#define shalloc_t(api,t) (t *)shalloc((api),sizeof(t))
+
 typedef void *(*alloc_fn)(void *allocator, size_t size);
 typedef void *(*alloc_align_fn)(void *allocator, size_t size, size_t alignment);
 typedef void *(*realloc_align_fn)(void *allocator, void *ptr, size_t new_size, size_t alignment);
-typedef void (*free_fn)(void *allocator, void *ptr);
-typedef void (*free_all_fn)(void *allocator);
+typedef void  (*free_fn)(void *allocator, void *ptr);
+typedef void  (*free_all_fn)(void *allocator);
 
-typedef struct alloc_api alloc_api;
-struct alloc_api
-{
+typedef struct alloc_api {
     alloc_fn alloc;
     alloc_align_fn alloc_align;
     realloc_align_fn realloc_align;
@@ -30,7 +37,7 @@ struct alloc_api
 
     void *allocator;
     size_t alignment;
-};
+} alloc_api;
 
 bool
 is_power_of_2(uintptr_t x)
@@ -84,12 +91,9 @@ calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
     {
         needed_space -= padding;
         // needed_space % a != 0
-        if ((needed_space & (a - 1)) != 0)
-        {
+        if ((needed_space & (a - 1)) != 0) {
             padding += a * (1 + (needed_space / a));
-        }
-        else
-        {
+        } else {
             padding += a * (needed_space / a);
         }
     }

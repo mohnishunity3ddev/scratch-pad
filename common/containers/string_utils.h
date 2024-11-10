@@ -6,11 +6,6 @@
 
 static alloc_api *alloc_api_global = {NULL};
 
-#define salloc(sz,a)        alloc_api_->alloc_align(alloc_api_->allocator,sz,a)
-#define srealloc(p,sz,a)    alloc_api_->realloc_align(alloc_api_->allocator,p,sz,a)
-#define sfree(p)            alloc_api_->free(alloc_api_->allocator,p)
-#define sfree_all()         alloc_api_->free_all(alloc_api_->allocator)
-
 typedef struct string32 string32;
 struct string32
 {
@@ -27,12 +22,12 @@ struct string32
 void string32_set_global_allocator(alloc_api *api);
 
 string32    string32_create(const char *c_str, const alloc_api *alloc_api_);
-void        string32_append(string32 *s, const char *c_str, const alloc_api *alloc_api_);
+void        string32_append(string32 *s, const char * c_str, const alloc_api *alloc_api_);
 void        string32_modify(string32 *s, const char *c_str, const alloc_api *alloc_api_);
 string32    string32_duplicate(const string32 *s, const alloc_api *alloc_api_);
 void        string32_free(string32 *s, const alloc_api *alloc_api_);
 
-bool         string32_compare(const string32 *s1, const string32 *s2);
+bool         string32_compare(const string32 *restrict s1, const string32 *restrict s2);
 const char * string32_cstr(const string32 *s);
 bool         string32_is_null_or_empty(const string32 *s);
 
@@ -44,7 +39,7 @@ void string32_unit_tests();
 
 #ifdef STRING32_IMPLEMENTATION
 string32
-string32_create(const char *c_str, const alloc_api *alloc_api_)
+string32_create(const char *c_str, const alloc_api *api)
 {
     string32 str = {};
     size_t len = strnlen_s(c_str, UINT_MAX);
@@ -55,9 +50,8 @@ string32_create(const char *c_str, const alloc_api *alloc_api_)
     // null terminated string.
     ++len;
     if (len > 8) {
-        if (alloc_api_ == NULL) alloc_api_ = alloc_api_global;
-        str.data.mem = (alloc_api_ != NULL) ? (char *)salloc(len, alloc_api_->alignment)
-                                            : (char *)malloc(len);
+        if (api == NULL) api = alloc_api_global;
+        str.data.mem = shalloc_arr(api, char, len);
         assert(str.data.mem != NULL);
         str.capacity = len;
         str.length = len - 1;
@@ -73,7 +67,7 @@ string32_create(const char *c_str, const alloc_api *alloc_api_)
 }
 
 void
-string32_append(string32 *s, const char *c_str, const alloc_api *alloc_api_)
+string32_append(string32 *s, const char *c_str, const alloc_api *api)
 {
     size_t lenA = s->length;
     size_t lenB = strnlen_s(c_str, UINT_MAX);
@@ -84,17 +78,16 @@ string32_append(string32 *s, const char *c_str, const alloc_api *alloc_api_)
         s->length = total_length - 1;
         s->data.sso_string[lenA + lenB] = '\0';
     } else {
-        if (alloc_api_ == NULL)
-            alloc_api_ = alloc_api_global;
+        if (api == NULL)
+            api = alloc_api_global;
         void *memory = (void *)s->data.mem;
         if (s->is_sso) {
-            memory = alloc_api_ != NULL ? salloc(total_length, alloc_api_->alignment) : malloc(total_length);
+            memory = shalloc_arr(api,char,total_length);
             memcpy_s(memory, total_length, s->data.sso_string, lenA);
             s->is_sso = false;
             s->capacity = total_length;
         } else if (s->capacity < total_length) {
-            memory = alloc_api_ != NULL ? srealloc(s->data.mem, total_length, alloc_api_->alignment)
-                                        : realloc(s->data.mem, total_length);
+            memory = shrealloc(api, s->data.mem, total_length);
             s->capacity = total_length;
         }
 
@@ -106,7 +99,7 @@ string32_append(string32 *s, const char *c_str, const alloc_api *alloc_api_)
 }
 
 void
-string32_modify(string32 *s, const char *c_str, const alloc_api *alloc_api_)
+string32_modify(string32 *s, const char *c_str, const alloc_api *api)
 {
     size_t len = strnlen_s(c_str, UINT_MAX);
     if (len < UINT_MAX)
@@ -120,11 +113,12 @@ string32_modify(string32 *s, const char *c_str, const alloc_api *alloc_api_)
 
             if (s->capacity < len)
             {
-                if (alloc_api_ == NULL)
-                    alloc_api_ = alloc_api_global;
-                memory = alloc_api_ != NULL ? salloc(len, alloc_api_->alignment) : malloc(len);
-                if (!s->is_sso)
-                    alloc_api_ != NULL ? sfree(s->data.mem) : free(s->data.mem);
+                if (api == NULL)
+                    api = alloc_api_global;
+                memory = shalloc(api, len);
+                if (!s->is_sso) {
+                    shfree(api, s->data.mem);
+                }
                 s->capacity = len;
             }
 
@@ -140,7 +134,7 @@ string32_modify(string32 *s, const char *c_str, const alloc_api *alloc_api_)
 }
 
 string32
-string32_duplicate(const string32 *s, const alloc_api *alloc_api_)
+string32_duplicate(const string32 *s, const alloc_api *api)
 {
     assert(s != NULL);
     string32 result;
@@ -148,11 +142,10 @@ string32_duplicate(const string32 *s, const alloc_api *alloc_api_)
         memcpy_s(&result, sizeof(string32), s, sizeof(string32));
     } else {
         assert(s->data.mem != NULL);
-        if (alloc_api_ == NULL)
-            alloc_api_ = alloc_api_global;
+        if (api == NULL)
+            api = alloc_api_global;
 
-        result.data.mem = (alloc_api_ != NULL) ? (char *)salloc(s->length + 1, alloc_api_->alignment)
-                                               : (char *)malloc(s->length + 1);
+        result.data.mem = shalloc_arr(api, char, s->length+1);
         strcpy_s(result.data.mem, s->capacity, s->data.mem);
         result.capacity = s->capacity;
         result.is_sso = false;
@@ -163,7 +156,7 @@ string32_duplicate(const string32 *s, const alloc_api *alloc_api_)
 }
 
 bool
-string32_compare(const string32 *s1, const string32 *s2)
+string32_compare(const string32 *restrict s1, const string32 *restrict s2)
 {
     bool result = (s1->length == s2->length) && (s1->is_sso == s2->is_sso);
     if (!result)
@@ -195,25 +188,20 @@ string32_is_null_or_empty(const string32 *s)
 }
 
 void
-string32_free(string32 *s, const alloc_api *alloc_api_)
+string32_free(string32 *s, const alloc_api *api)
 {
-    if (alloc_api_ == NULL)
-        alloc_api_ = alloc_api_global;
+    if (api == NULL)
+        api = alloc_api_global;
 
-    if (alloc_api_ != NULL) {
-        if (!s->is_sso) {
-            sfree(s->data.mem);
-        }
-    } else {
-        if (!s->is_sso)
-            free(s->data.mem);
+    if (!s->is_sso) {
+        shfree(api, s->data.mem);
     }
     memset(s, 0, sizeof(*s));
 }
 
-// X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------
-// ----------------------------------------------------------UNIT TESTS----------------------------------------------------------
-// X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------X------
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// UNIT TESTS
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #ifdef STRING32_UNIT_TESTS
 #include "memory/freelist_alloc.h"
@@ -362,9 +350,9 @@ void
 test_string32_large_strings(alloc_api *api)
 {
     printf("%-40s", "Running Large String Tests...");
-
+    char *large_buffer = NULL;
     // Test with increasingly large strings
-    char* large_buffer = (char *)malloc(10000);
+    large_buffer = shalloc_arr(api, char, 10000);
     memset(large_buffer, 'A', 9999);
     large_buffer[9999] = '\0';
 
@@ -388,7 +376,7 @@ test_string32_large_strings(alloc_api *api)
     }
     string32_free(&s2, api);
 
-    free(large_buffer);
+    shfree(api, large_buffer);
     printf("[PASSED]\n");
 }
 
@@ -506,8 +494,7 @@ test_string32_stress(alloc_api *api)
 
     // Create many strings simultaneously
     const int NUM_STRINGS = 1000;
-    string32* strings = (string32 *)malloc(NUM_STRINGS * sizeof(string32));
-
+    string32 *strings = shalloc_arr(api, string32, NUM_STRINGS);
     // Initialize with varying lengths
     for (int i = 0; i < NUM_STRINGS; i++) {
         char buffer[1024];
@@ -531,7 +518,7 @@ test_string32_stress(alloc_api *api)
     for (int i = 0; i < NUM_STRINGS; i++) {
         string32_free(&strings[i], api);
     }
-    free(strings);
+    shfree(api, strings);
 
     // Test rapid allocation/deallocation
     for (int i = 0; i < 1000; i++) {

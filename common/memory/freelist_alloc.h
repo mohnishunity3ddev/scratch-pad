@@ -3,19 +3,17 @@
 
 #include "memory.h"
 
-typedef struct Freelist_Allocation_Header Freelist_Allocation_Header;
-struct Freelist_Allocation_Header {
+typedef struct Freelist_Allocation_Header {
     /// @brief this includes required size, size for header and size for alignment padding.
     size_t block_size;
     /// @brief size for alignment only
     size_t alignment_padding;
-};
+} Freelist_Allocation_Header;
 
-typedef struct Freelist_Node Freelist_Node;
-struct Freelist_Node {
-    Freelist_Node *next;
+typedef struct Freelist_Node {
+    struct Freelist_Node *next;
     size_t block_size;
-};
+} Freelist_Node;
 
 typedef enum Placement_Policy {
     PLACEMENT_POLICY_FIND_FIRST,
@@ -638,7 +636,7 @@ freelist_realloc_tests()
         freelist_free(&fl, ptr2);
         freelist_test_initial_state(&fl);
     }
-
+    
     printf("2. Basic realloc tests...\n");
     {
         // Test growing allocation
