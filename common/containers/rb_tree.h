@@ -234,12 +234,12 @@ rbt_insert_internal(rbt *t, rbt_node *z)
 // Deletion stuff
 // - - - - - - - - - - - - - - - - - - -
 
-/// @brief replace u with v in the red black tree t
+/// @brief replace u with v in the red black tree t. Only sets the parent of u to point to v now.
 static void
 rbt_transplant_internal(rbt *t, rbt_node *u, rbt_node *v)
 {
     assert((u != NULL) && (v != NULL));
-    if (u->parent == NULL) {
+    if (rbt_is_nil_sentinel_internal(u->parent)) {
         t->root = v;          // u is the root. make v the new root
     } else if (u == u->parent->left) {
         u->parent->left = v;  // make v the left child of u's parent.
@@ -255,7 +255,8 @@ rbt_min_value_node_internal(rbt_node *node)
 {
     assert(node != NULL);
     rbt_node *current = node;
-    while (current->left != NULL)
+    while (current->left != NULL &&
+           !rbt_is_nil_sentinel_internal(current->left))
     {
         current = current->left;
     }
@@ -278,19 +279,66 @@ rbt_remove_fixup_internal(rbt *t, rbt_node *x)
            x->color == RBT_COLOR_BLACK)
     {
         if (x == x->parent->left) {                             // x is the left child of it's parent
-            w = x->parent->right;                               // x is its parent left child, x's sibling is it's parent's right child.
+            w = x->parent->right;                               // x is its parent's left child,
+                                                                // x's sibling is it's parent's right child.
             // checking for Case 1: x's sibling being red.
-            // if true, this means the tree has gotten heavy on the side where x is.
             if (w->color == RBT_COLOR_RED) {                    // is x's sibling red?
                 w->color = RBT_COLOR_BLACK;
                 x->parent->color = RBT_COLOR_RED;
                 rbt_rotate_left_internal(t, x->parent);
                 w = x->parent->right;
             }
-            // Case 2: check if the sibling has two black children
-
+            // Case 2: sibling is black. check if the sibling has two black children
+            if (w->left->color == RBT_COLOR_BLACK &&
+                w->right->color == RBT_COLOR_BLACK)
+            {
+                w->color = RBT_COLOR_RED;
+                x = x->parent;
+            } else {
+                // Case 3: sibling is black. it's left child is red, and it's right child is black.
+                if (w->right->color == RBT_COLOR_BLACK) {
+                    w->left->color = RBT_COLOR_BLACK;
+                    w->color = RBT_COLOR_RED;
+                    rbt_rotate_right_internal(t, w);
+                    w = x->parent->right;
+                }
+                // Case 4: sibling is black, and it's right child is red.
+                w->color = x->parent->color;
+                x->parent->color = RBT_COLOR_BLACK;
+                w->right->color = RBT_COLOR_BLACK;
+                rbt_rotate_left_internal(t, x->parent);
+                x = t->root;
+            }
+        } else {
+            w = x->parent->left;
+            if (w->color == RBT_COLOR_RED) {
+                w->color = RBT_COLOR_BLACK;
+                x->parent->color = RBT_COLOR_RED;
+                rbt_rotate_right_internal(t, x->parent);
+                w = x->parent->left;
+            }
+            if (x->right->color == RBT_COLOR_BLACK &&
+                w->left->color == RBT_COLOR_BLACK)
+            {
+                w->color = RBT_COLOR_RED;
+                x = x->parent;
+            } else {
+                if (w->left->color == RBT_COLOR_BLACK) {
+                    w->right->color = RBT_COLOR_BLACK;
+                    w->color = RBT_COLOR_RED;
+                    rbt_rotate_left_internal(t, w);
+                    w = x->parent->left;
+                }
+                w->color = x->parent->color;
+                x->parent->color = RBT_COLOR_BLACK;
+                w->left->color = RBT_COLOR_BLACK;
+                rbt_rotate_right_internal(t, x->parent);
+                x = t->root;
+            }
         }
     }
+
+    x->color = RBT_COLOR_BLACK;
 }
 
 static void
@@ -306,29 +354,37 @@ rbt_remove_node_internal(rbt *t, rbt_node *z)
         x = z->left;                                        // z's left child is the one replacing it.
         rbt_transplant_internal(t, z, z->left);             // set parent of z to point to it's left child.
     } else {
+
         // z (the node we want to remove) has two children.
         // the node that replaces it is the inorder successor returned by the rbt_min_value_node_internal below.
         // y is the minimum node which is the left most node in z's right subtree.
-
-        y = rbt_min_value_node_internal(z->right);          // get the minimum node in z's right subtree. this is the node that replaces z in the tree.
+        y = rbt_min_value_node_internal(z->right);          // get the minimum node in z's right subtree. this is the node
+                                                            // that replaces z in the tree.
         y_original_color = y->color;                        // cache the original color of the node that we will be moving.
         x = y->right;                                       // points to y's old location before replacing z.
 
         if (y != z->right) {                                // if the inorder successor of z is somewhere deep in the tree.
-            rbt_transplant_internal(t, y, y->right);        // replace y with x(y's right child). This will be the double black node if y was black
-            y->right = z->right;
-            y->right->parent = y;                           // make z's right child y's right child now
+            rbt_transplant_internal(t, y, y->right);        // replace y with x(y's right child). This will be the double
+                                                            // black node if y was black
+            y->right = z->right;                            // the parent of z now points to y, y's right becomes z's right child.
+            z->right->parent = y;                           // make z's right child y's right child now
+        } else {
+            x->parent = y;
         }
 
+        // here setting z's right does not make sense since at this point, y is z's right child and it is the one
+        // replacing z.
         rbt_transplant_internal(t, z, y);                   // have z's parent to point to y as it's child now.
         y->left = z->left;
         y->left->parent = y;                                // make z's left child, y's left child now.
         y->color = z->color;                                // set z's color as the new color of the node replacing it (y).
-        shfree(t->api, z);                                  // parent and children pointers have been replaced to y, safe to free the z now.
     }
+
+    shfree(t->api, z); // safe to free the z now.
 
     // only need to call fixup routine when y(the node moved/removed) is black
     // since red-black tree rules are disturbed only when you move a black node.
+    // x is the deepest node that was moved. so call fixup with x.
     if (y_original_color == RBT_COLOR_BLACK) {
         rbt_remove_fixup_internal(t, x);
     }
@@ -630,7 +686,9 @@ rbt_level_order(const rbt *t, const alloc_api *api)
     shfree(api, q.arr);
 }
 
-void rbt_display_tree(const rbt *t, const alloc_api *api) {
+void
+rbt_display_tree(const rbt *t, const alloc_api *api)
+{
     printf("Displaying Red Black Tree := \n");
     queue_voidp q = qinit_p(api);
     qpush_p(&q, t->root);
@@ -863,31 +921,61 @@ red_black_tree_test()
     fl.policy = PLACEMENT_POLICY_FIND_BEST;
 
     srand(time(NULL));
-#if 0
+#if 1
+    rbt rb_tree = rbt_create_tree(&fl.api);
+
+    // size_t used_a = fl.used;
+    // rbt_insert_key(&rb_tree, 41);
+    // rbt_insert_key(&rb_tree, 38);
+    // rbt_insert_key(&rb_tree, 31);
+    // rbt_insert_key(&rb_tree, 12);
+    // rbt_insert_key(&rb_tree, 19);
+    // rbt_insert_key(&rb_tree, 8);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // size_t used_b = fl.used;
+    // rbt_remove_key(&rb_tree, 8);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // rbt_remove_key(&rb_tree, 12);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // rbt_remove_key(&rb_tree, 19);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // rbt_remove_key(&rb_tree, 31);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // rbt_remove_key(&rb_tree, 38);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // rbt_remove_key(&rb_tree, 41);
+    // rbt_validate_tree(&rb_tree, true, true, &fl.api);
+    // size_t used_c = fl.used;
+    // assert(used_c == used_a);
+    // int x = 0;
+
     rbt_insert_key(&rb_tree, 10);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 18);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 7);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 15);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 16);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 30);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 25);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 40);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 60);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 2);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 1);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
     rbt_insert_key(&rb_tree, 70);
-    // rbt_display_tree(&rb_tree, &fl.api);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
+
+    rbt_remove_key(&rb_tree, 60);
+    rbt_validate_tree(&rb_tree, true, true, &fl.api);
 #else
     typedef struct interval {
         int low, high;
@@ -908,10 +996,10 @@ red_black_tree_test()
         bool arr[max_num] = {};
         int i=0;
         for (; i<num_items; ++i) {
-            int _r = rand() * ((max_num / RAND_MAX) + 1);
+            int _r = rand() * ((max_num/RAND_MAX) + 1);
             int element = (_r % max_num);
             while (arr[element]) {
-                _r = rand() * ((max_num / RAND_MAX) + 1);
+                _r = rand() * ((max_num/RAND_MAX) + 1);
                 element = (_r % max_num);
             }
             arr[element] = true;

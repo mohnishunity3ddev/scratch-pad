@@ -636,7 +636,7 @@ freelist_realloc_tests()
         freelist_free(&fl, ptr2);
         freelist_test_initial_state(&fl);
     }
-    
+
     printf("2. Basic realloc tests...\n");
     {
         // Test growing allocation

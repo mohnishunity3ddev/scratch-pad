@@ -1,5 +1,5 @@
 {
-    "editor.fontFamily": "'maple mono nf', 'caskaydiacove nf mono', 'pragmatapro mono liga', 'comic code ligatures semibold', 'sf mono', 'RecMonoCasual Nerd Font Mono', 'sf mono', 'ZedMono NFM', 'UbuntuSansMono NFM', 'iosevkaterm nerd font mono', 'jetbrainsmono nf', 'agave nerd font mono r', 'JetBrainsMono nerd font mono'",
+    "editor.fontFamily": "'caskaydiacove nf mono', 'maple mono nf', 'comic code ligatures semibold', 'pragmatapro mono liga', 'sf mono', 'RecMonoCasual Nerd Font Mono', 'sf mono', 'ZedMono NFM', 'UbuntuSansMono NFM', 'iosevkaterm nerd font mono', 'jetbrainsmono nf', 'agave nerd font mono r', 'JetBrainsMono nerd font mono'",
     "editor.fontSize": 16,
 
     "editor.bracketPairColorization.enabled": false,
@@ -145,7 +145,8 @@
         "freelist_alloc.h": "c",
         "stdio.h": "c",
         "memory.h": "c",
-        "rb_tree.h": "c"
+        "rb_tree.h": "c",
+        "common.h": "c"
     },
     "files.trimTrailingWhitespace": true,
     "editor.renderLineHighlight": "all",

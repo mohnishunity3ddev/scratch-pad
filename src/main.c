@@ -12,6 +12,7 @@
 // #define POOL_ALLOCATOR_UNIT_TEST
 // #include <memory/pool_alloc.h>
 #include <stdio.h>
+#include <assert.h>
 
 #define QUEUE_IMPLEMENTATION
 #include <containers/queue.h>
@@ -26,8 +27,6 @@
 #define RBT_UNIT_TESTS
 #include <containers/rb_tree.h>
 
-// #define STRING32_IMPLEMENTATION
-// #include <containers/string_utils.h>
 
 int
 main()
