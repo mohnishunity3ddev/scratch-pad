@@ -4,8 +4,8 @@
 #include "memory/memory.h"
 #include "common.h"
 
-#define RBT_IMPLEMENTATION
-#define RBT_UNIT_TESTS
+// #define RBT_IMPLEMENTATION
+// #define RBT_UNIT_TESTS
 #define node_not_null(n) (n != NULL && !rbt_is_nil_sentinel_internal(n))
 #define node_null(n) (n == NULL || rbt_is_nil_sentinel_internal(n))
 
@@ -433,7 +433,6 @@ rbt_remove_key(rbt *t, int key)
 }
 
 #ifdef RBT_UNIT_TESTS
-
 #ifndef FREELIST_ALLOCATOR_IMPLEMENTATION
 #define FREELIST_ALLOCATOR_IMPLEMENTATION
 #endif

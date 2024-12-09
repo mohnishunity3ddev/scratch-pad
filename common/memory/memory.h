@@ -13,14 +13,19 @@
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 #endif
 
-#define shalloc_a(api,sz,a) (((api) != NULL) ? (api)->alloc_align((api)->allocator, (sz), (a)) : malloc((sz)))
-#define shalloc(api,sz) shalloc_a(api, sz, (api)->alignment)
-#define shrealloc_a(api,p,sz,a) (((api) != NULL) ? (api)->realloc_align((api)->allocator, (p), (sz), (a)) : realloc(p,sz))
-#define shrealloc(api,p,sz) shrealloc_a(api,p,sz,(api)->alignment)
-#define shfree(api,p) ((api) != NULL) ? (api)->free((api)->allocator,(p)) : free((p))
-#define shalloc_arr(api,t,c) (t *)shalloc((api),(c)*sizeof(t))
-#define shrealloc_arr(api,p,t,c) (t *)shrealloc((api),p,(c)*sizeof(t))
-#define shalloc_t(api,t) (t *)shalloc((api),sizeof(t))
+#define KILOBYTES(kb) ((kb)*1024)
+#define MEGABYTES(mb) (KILOBYTES((mb))*1024)
+#define GIGABYTES(gb) (MEGABYTES((gb))*1024)
+
+
+#define shalloc_a(api,sz,a) (api != NULL ? api->alloc_align(api->allocator, sz, a) : malloc(sz))
+#define shalloc(api,sz) shalloc_a(api, sz, api->alignment)
+#define shrealloc_a(api,p,sz,a) (api != NULL ? api->realloc_align(api->allocator, p, sz, a) : realloc(p,sz))
+#define shrealloc(api,p,sz) shrealloc_a(api,p,sz,api->alignment)
+#define shfree(api,p) (api != NULL) ? api->free(api->allocator,p) : free(p)
+#define shalloc_arr(api,t,c) (t *)shalloc(api,c*sizeof(t))
+#define shrealloc_arr(api,p,t,c) (t *)shrealloc(api,p,c*sizeof(t))
+#define shalloc_t(api,t) (t *)shalloc(api,sizeof(t))
 
 typedef void *(*alloc_fn)(void *allocator, size_t size);
 typedef void *(*alloc_align_fn)(void *allocator, size_t size, size_t alignment);

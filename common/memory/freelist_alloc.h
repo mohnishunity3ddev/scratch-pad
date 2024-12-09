@@ -22,7 +22,13 @@ typedef enum Placement_Policy {
 
 typedef struct Freelist Freelist;
 
+#define freelist_create(fl, sz, align, pol)                                                                       \
+    Freelist fl;                                                                                                  \
+    freelist_init(&fl, malloc(sz), sz, align);                                                                    \
+    fl.policy = pol
+
 void  freelist_init(Freelist *fl, void *data, size_t size, size_t alignment);
+alloc_api *freelist_get_api(Freelist *fl);
 void *freelist_alloc(void *fl, size_t size);
 void *freelist_alloc_align(void *fl, size_t size, size_t alignment);
 void  freelist_free(void *fl, void *ptr);
@@ -98,6 +104,13 @@ freelist_init(Freelist *fl, void *data, size_t size, size_t alignment)
 
     fl->api.alignment = alignment;
     fl->api.allocator = (void *)fl;
+}
+
+alloc_api *
+freelist_get_api(Freelist *fl)
+{
+    alloc_api *api = &fl->api;
+    return api;
 }
 
 Freelist_Node *
@@ -188,7 +201,7 @@ freelist_alloc_align(void *fl, size_t size, size_t alignment)
     }
 
     if (node == NULL) {
-        printf("Freelist has no memory.\n");
+        printf("Freelist does not have enough memory.\n");
         return NULL;
     }
 

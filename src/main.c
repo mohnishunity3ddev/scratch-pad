@@ -14,22 +14,18 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define QUEUE_IMPLEMENTATION
-#include <containers/queue.h>
+#define FREELIST_ALLOCATOR_IMPLEMENTATION
+#include <memory/freelist_alloc.h>
 
-#define STACK_IMPLEMENTATION
-#include <containers/stack.h>
+#define STRING32_IMPLEMENTATION
+#include <containers/string_utils.h>
 
-#define DARR_IMPLEMENTATION
-#include <containers/darr.h>
-
-#define RBT_IMPLEMENTATION
-#define RBT_UNIT_TESTS
-#include <containers/rb_tree.h>
-
+#define HASHTABLE_IMPLEMENTATION
+#define HASHTABLE_UNIT_TESTS
+#include <containers/htable.h>
 
 int
 main()
 {
-    red_black_tree_test();
+    htable_unit_tests();
 }

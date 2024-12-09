@@ -22,14 +22,23 @@ struct string32
 void string32_set_global_allocator(alloc_api *api);
 
 string32    string32_create(const char *c_str, const alloc_api *alloc_api_);
+#ifdef MUTABLE_STRINGS
 void        string32_append(string32 *s, const char * c_str, const alloc_api *alloc_api_);
 void        string32_modify(string32 *s, const char *c_str, const alloc_api *alloc_api_);
-string32    string32_duplicate(const string32 *s, const alloc_api *alloc_api_);
-void        string32_free(string32 *s, const alloc_api *alloc_api_);
+#endif
+string32     string32_dup_char(const string32 *s, const alloc_api *alloc_api_);
+string32    *string32_dup(const string32 *s, const alloc_api *api);
+void         string32_cstr_free(string32 *s, const alloc_api *alloc_api_);
+string32     string32_to_lower(const string32 *s, const alloc_api *api);
 
+unsigned int string32_hash(const string32 *str, unsigned int seed);
 bool         string32_compare(const string32 *restrict s1, const string32 *restrict s2);
-const char * string32_cstr(const string32 *s);
+void         string32_to_string(const string32 *s, char *buffer, size_t max_length);
+
+const char  *string32_cstr(const string32 *s);
 bool         string32_is_null_or_empty(const string32 *s);
+
+char        char_to_lower(char c);
 
 void string32_set_global_allocator(alloc_api *api) { alloc_api_global = api; }
 
@@ -66,6 +75,7 @@ string32_create(const char *c_str, const alloc_api *api)
     return str;
 }
 
+#ifdef MUTABLE_STRINGS
 void
 string32_append(string32 *s, const char *c_str, const alloc_api *api)
 {
@@ -132,9 +142,10 @@ string32_modify(string32 *s, const char *c_str, const alloc_api *api)
         printf("[string32_modify]: crossing the string length threshold!\n");
     }
 }
+#endif
 
 string32
-string32_duplicate(const string32 *s, const alloc_api *api)
+string32_dup_char(const string32 *s, const alloc_api *api)
 {
     assert(s != NULL);
     string32 result;
@@ -150,6 +161,43 @@ string32_duplicate(const string32 *s, const alloc_api *api)
         result.capacity = s->capacity;
         result.is_sso = false;
         result.length = s->length;
+    }
+
+    return result;
+}
+
+string32 *
+string32_dup(const string32 *s, const alloc_api *api)
+{
+    assert(s != NULL);
+    string32* result = shalloc_t(api, string32);
+    if (s->is_sso) {
+        memcpy_s(result, sizeof(string32), s, sizeof(string32));
+    } else {
+        assert(s->data.mem != NULL);
+        if (api == NULL)
+            api = alloc_api_global;
+
+        result->data.mem = shalloc_arr(api, char, s->length+1);
+        strcpy_s(result->data.mem, s->capacity, s->data.mem);
+        result->capacity = s->capacity;
+        result->is_sso = false;
+        result->length = s->length;
+    }
+
+    return result;
+}
+
+unsigned int
+string32_hash(const string32 *str, unsigned int seed)
+{
+    unsigned int result = seed;
+    const char *s = string32_cstr(str);
+
+    for (size_t i = 0; i < str->length; ++i) {
+        char c = s[i];
+        result ^= c;
+        result *= 16777619;
     }
 
     return result;
@@ -173,11 +221,29 @@ string32_compare(const string32 *restrict s1, const string32 *restrict s2)
     return result;
 }
 
+string32
+string32_to_lower(const string32 *s, const alloc_api *api)
+{
+    if (api == NULL) {
+        api = alloc_api_global;
+    }
+
+    string32 result = string32_dup_char(s, api);
+    return result;
+}
+
 const char *
 string32_cstr(const string32 *s)
 {
     const char *cstr = s->is_sso ? s->data.sso_string : s->data.mem;
     return cstr;
+}
+
+void
+string32_to_string(const string32 *s, char *buffer, size_t max_length)
+{
+    assert((s->length+1 <= max_length) && "Buffer Length not enough for this string");
+    snprintf(buffer, max_length, "%s", string32_cstr(s));
 }
 
 bool
@@ -188,7 +254,7 @@ string32_is_null_or_empty(const string32 *s)
 }
 
 void
-string32_free(string32 *s, const alloc_api *api)
+string32_cstr_free(string32 *s, const alloc_api *api)
 {
     if (api == NULL)
         api = alloc_api_global;
@@ -199,12 +265,31 @@ string32_free(string32 *s, const alloc_api *api)
     memset(s, 0, sizeof(*s));
 }
 
+void string32_free(string32 *s, const alloc_api *api) {
+    if (s != NULL) {
+        if (api == NULL)
+            api = alloc_api_global;
+
+        if (!s->is_sso) {
+            shfree(api, s->data.mem);
+        }
+        shfree(api, s);
+    }
+}
+
+char
+char_to_lower(char c)
+{
+    return c - 'a';
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // UNIT TESTS
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #ifdef STRING32_UNIT_TESTS
 #include "memory/freelist_alloc.h"
+#define MUTABLE_STRINGS
 void
 test_string32_basic_sso(alloc_api *api)
 {
@@ -227,7 +312,7 @@ test_string32_basic_sso(alloc_api *api)
         assert(s.is_sso);
         assert(s.length == strlen(sso_strings[i]));
         assert(strcmp(string32_cstr(&s), sso_strings[i]) == 0);
-        string32_free(&s, api);
+        string32_cstr_free(&s, api);
     }
 
     // Test incremental building within SSO
@@ -239,7 +324,7 @@ test_string32_basic_sso(alloc_api *api)
         assert(s1.is_sso);
         assert(s1.length == i + 1);
     }
-    string32_free(&s1, api);
+    string32_cstr_free(&s1, api);
 
     // Test SSO with special characters
     const char* special_chars[] = {
@@ -257,7 +342,7 @@ test_string32_basic_sso(alloc_api *api)
         string32 s = string32_create(special_chars[i], api);
         assert(s.is_sso);
         assert(memcmp(string32_cstr(&s), special_chars[i], strlen(special_chars[i])) == 0);
-        string32_free(&s, api);
+        string32_cstr_free(&s, api);
     }
     printf("[PASSED]\n");
 }
@@ -273,7 +358,7 @@ test_string32_sso_heap_transition(alloc_api *api)
     string32_append(&s1, "8", api);
     assert(!s1.is_sso);
     assert(strcmp(string32_cstr(&s1), "12345678") == 0);
-    string32_free(&s1, api);
+    string32_cstr_free(&s1, api);
 
     // Test multiple transitions back and forth
     string32 s2 = string32_create("", api);
@@ -284,7 +369,7 @@ test_string32_sso_heap_transition(alloc_api *api)
         string32_modify(&s2, (i % 2 == 0) ? long_str : short_str, api);
         assert(strcmp(string32_cstr(&s2), (i % 2 == 0) ? long_str : short_str) == 0);
     }
-    string32_free(&s2, api);
+    string32_cstr_free(&s2, api);
 
     // Test gradual growth across boundary
     string32 s3 = string32_create("", api);
@@ -295,7 +380,7 @@ test_string32_sso_heap_transition(alloc_api *api)
         assert(s3.is_sso == (i < 7));
         assert(strcmp(string32_cstr(&s3), buffer) == 0);
     }
-    string32_free(&s3, api);
+    string32_cstr_free(&s3, api);
     printf("[PASSED]\n");
 }
 
@@ -324,8 +409,8 @@ test_string32_comparison(alloc_api *api)
             string32 s1 = string32_create(test_strings[i], api);
             string32 s2 = string32_create(test_strings[j], api);
             assert(string32_compare(&s1, &s2) == (strcmp(test_strings[i], test_strings[j]) == 0));
-            string32_free(&s1, api);
-            string32_free(&s2, api);
+            string32_cstr_free(&s1, api);
+            string32_cstr_free(&s2, api);
         }
     }
 
@@ -340,8 +425,8 @@ test_string32_comparison(alloc_api *api)
 
     for (size_t i = 0; i < sizeof(special_pairs)/(2*sizeof(string32)); i++) {
         assert(string32_compare(&special_pairs[i][0], &special_pairs[i][1]));
-        string32_free(&special_pairs[i][0], api);
-        string32_free(&special_pairs[i][1], api);
+        string32_cstr_free(&special_pairs[i][0], api);
+        string32_cstr_free(&special_pairs[i][1], api);
     }
     printf("[PASSED]\n");
 }
@@ -365,7 +450,7 @@ test_string32_large_strings(alloc_api *api)
         assert(strncmp(string32_cstr(&s1), large_buffer, len) == 0);
         large_buffer[len] = 'A';
     }
-    string32_free(&s1, api);
+    string32_cstr_free(&s1, api);
 
     // Test appending to large strings
     string32 s2 = string32_create(large_buffer, api);
@@ -374,7 +459,7 @@ test_string32_large_strings(alloc_api *api)
         string32_append(&s2, append_str, api);
         assert(!s2.is_sso);
     }
-    string32_free(&s2, api);
+    string32_cstr_free(&s2, api);
 
     shfree(api, large_buffer);
     printf("[PASSED]\n");
@@ -397,7 +482,7 @@ test_string32_duplication(alloc_api *api)
 
     for (size_t i = 0; i < sizeof(test_cases)/sizeof(char*); i++) {
         string32 original = string32_create(test_cases[i], api);
-        string32 duplicate = string32_duplicate(&original, api);
+        string32 duplicate = string32_dup_char(&original, api);
 
         assert(string32_compare(&original, &duplicate));
         assert(original.length == duplicate.length);
@@ -408,8 +493,8 @@ test_string32_duplication(alloc_api *api)
         assert(!string32_compare(&original, &duplicate));
         assert(strcmp(string32_cstr(&original), test_cases[i]) == 0);
 
-        string32_free(&original, api);
-        string32_free(&duplicate, api);
+        string32_cstr_free(&original, api);
+        string32_cstr_free(&duplicate, api);
     }
     printf("[PASSED]\n");
 }
@@ -439,7 +524,7 @@ test_string32_modifications(alloc_api *api)
             assert(strcmp(string32_cstr(&s1), *mod) == 0);
         }
     }
-    string32_free(&s1, api);
+    string32_cstr_free(&s1, api);
 
     // Test alternating append and modify
     string32 s2 = string32_create("base", api);
@@ -452,7 +537,7 @@ test_string32_modifications(alloc_api *api)
             string32_modify(&s2, buffer, api);
         }
     }
-    string32_free(&s2, api);
+    string32_cstr_free(&s2, api);
     printf("[PASSED]\n");
 }
 
@@ -469,13 +554,13 @@ test_string32_edge_cases(alloc_api *api)
         string32_append(&s1, "", api);
         assert(string32_is_null_or_empty(&s1));
     }
-    string32_free(&s1, api);
+    string32_cstr_free(&s1, api);
 
     // Test with strings containing null bytes
     char null_str[] = "abc\0def";
     string32 s2 = string32_create(null_str, api);
     assert(s2.length == 3);  // Should only count up to null byte
-    string32_free(&s2, api);
+    string32_cstr_free(&s2, api);
 
     // Test modification with same content
     string32 s3 = string32_create("test", api);
@@ -483,7 +568,7 @@ test_string32_edge_cases(alloc_api *api)
         string32_modify(&s3, "test", api);
         assert(strcmp(string32_cstr(&s3), "test") == 0);
     }
-    string32_free(&s3, api);
+    string32_cstr_free(&s3, api);
     printf("[PASSED]\n");
 }
 
@@ -516,7 +601,7 @@ test_string32_stress(alloc_api *api)
 
     // Cleanup
     for (int i = 0; i < NUM_STRINGS; i++) {
-        string32_free(&strings[i], api);
+        string32_cstr_free(&strings[i], api);
     }
     shfree(api, strings);
 
@@ -526,7 +611,7 @@ test_string32_stress(alloc_api *api)
         string32_modify(&s, "This is a longer string that won't fit in SSO", api);
         string32_modify(&s, "short again", api);
         string32_append(&s, "make it longer again with some appended text", api);
-        string32_free(&s, api);
+        string32_cstr_free(&s, api);
     }
     printf("[PASSED]\n");
 }

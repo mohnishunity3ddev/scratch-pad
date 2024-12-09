@@ -33,4 +33,14 @@
 #define print_type(x)                                                                                             \
     _Generic((x), int: "int", float: "float", double: "double", char *: "string", default: "unknown")
 
+#define TEST_ASSERT(condition, message)                                                                           \
+    do                                                                                                            \
+    {                                                                                                             \
+        if (!(condition))                                                                                         \
+        {                                                                                                         \
+            printf("FAILED: %s (line %d)\n", message, __LINE__);                                                  \
+            assert(condition);                                                                                    \
+        }                                                                                                         \
+    } while (0)
+
 #endif
