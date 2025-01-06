@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#define FREELIST_ALLOCATOR_UNIT_TESTS
 #define FREELIST_ALLOCATOR_IMPLEMENTATION
 #include <memory/freelist_alloc.h>
 
@@ -24,8 +25,13 @@
 #define HASHTABLE_UNIT_TESTS
 #include <containers/htable.h>
 
+#define RBT_IMPLEMENTATION
+#include <containers/rb_tree.h>
+
 int
-main()
+main(int argc, char **argv)
 {
-    htable_unit_tests();
+    freelist_unit_tests();
+
+    return 0;
 }

@@ -23,9 +23,17 @@ void  pool_init(Pool *p, void *backing_buffer, size_t backing_buffer_length, siz
 void *pool_alloc(Pool *p);
 void  pool_free(Pool *p, void *ptr);
 void  pool_free_all(Pool *p);
+
+#ifdef POOL_ALLOCATOR_UNIT_TEST
 void  pool_alloc_test();
+#endif
 
 #ifdef POOL_ALLOCATOR_IMPLEMENTATION
+#include <assert.h>
+#include <stddef.h>
+#include <string.h>
+#include "memory.h"
+
 void
 pool_init(Pool *p, void *backing_buffer, size_t backing_buffer_length, size_t chunk_size, size_t chunk_alignment)
 {
@@ -98,9 +106,8 @@ void
 pool_free_all(Pool *p)
 {
     size_t chunk_count = p->buf_len / p->chunk_size;
-    size_t i;
 
-    for (int i = 0; i < chunk_count; ++i) {
+    for (size_t i = 0; i < chunk_count; ++i) {
         void *ptr = &p->buf[i * p->chunk_size];
         Pool_Free_Node *node = (Pool_Free_Node *)ptr;
 

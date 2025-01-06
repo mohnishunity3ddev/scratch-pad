@@ -2,6 +2,7 @@
 #define FREELIST_ALLOC_H
 
 #include "memory.h"
+#include <stdint.h>
 
 typedef struct Freelist_Allocation_Header {
     /// @brief this includes required size, size for header and size for alignment padding.
@@ -27,14 +28,14 @@ typedef struct Freelist Freelist;
     freelist_init(&fl, malloc(sz), sz, align);                                                                    \
     fl.policy = pol
 
-void  freelist_init(Freelist *fl, void *data, size_t size, size_t alignment);
-alloc_api *freelist_get_api(Freelist *fl);
+void        freelist_init(Freelist *fl, void *data, size_t size, size_t alignment);
+alloc_api  *freelist_get_api(Freelist *fl);
 void *freelist_alloc(void *fl, size_t size);
-void *freelist_alloc_align(void *fl, size_t size, size_t alignment);
-void  freelist_free(void *fl, void *ptr);
-void *freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment);
-void  freelist_free_all(void *fl);
-size_t freelist_remaining_space(Freelist *fl);
+void       *freelist_alloc_align(void *fl, size_t size, size_t alignment);
+void        freelist_free(void *fl, void *ptr);
+void       *freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment);
+void        freelist_free_all(void *fl);
+size_t      freelist_remaining_space(Freelist *fl);
 
 struct Freelist {
     alloc_api api;
@@ -53,13 +54,20 @@ void freelist_unit_tests();
 #endif
 
 #ifdef FREELIST_ALLOCATOR_IMPLEMENTATION
+#include <stdio.h>
 void  freelist_node_insert(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *new_node);
 void  freelist_node_remove(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *del_node);
 void *freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, size_t alignment);
+size_t freelist_block_size(void *ptr);
+Freelist_Node *freelist_find_first(Freelist *fl, size_t size, size_t alignment, size_t *padding_,
+                                   Freelist_Node **prev_node_);
+Freelist_Node *freelist_find_best(Freelist *fl, size_t size, size_t alignment, size_t *padding_,
+                                  Freelist_Node **prev_node_);
+
 
 size_t freelist_block_size(void *ptr) {
     assert(ptr != NULL);
-    Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((char *)ptr -
+    Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((uintptr_t)ptr -
                                                                         sizeof(Freelist_Allocation_Header));
     size_t result = header->block_size;
     return result;
@@ -217,7 +225,7 @@ freelist_alloc_align(void *fl, size_t size, size_t alignment)
         if (remaining > sizeof(Freelist_Allocation_Header) &&
             remaining > sizeof(Freelist_Node))
         {
-            Freelist_Node *new_node = (Freelist_Node *)((char *)node + required_space);
+            Freelist_Node *new_node = (Freelist_Node *)((uintptr_t)node + required_space);
             new_node->block_size = remaining;
             freelist_node_insert(freelist, node, new_node);
         } else {
@@ -229,13 +237,13 @@ freelist_alloc_align(void *fl, size_t size, size_t alignment)
 
     freelist_node_remove(freelist, prev_node, node);
 
-    header_ptr = (Freelist_Allocation_Header *)((char *)node + alignment_padding);
+    header_ptr = (Freelist_Allocation_Header *)((uintptr_t)node + alignment_padding);
     header_ptr->block_size = required_space;
     header_ptr->alignment_padding = alignment_padding;
 
     freelist->used += required_space;
 
-    void *memory = (void *)((char *)header_ptr + alloc_header_size);
+    void *memory = (void *)((uintptr_t)header_ptr + alloc_header_size);
     return memory;
 }
 
@@ -254,10 +262,10 @@ freelist_free(void *fl, void *ptr)
         return;
     }
 
-    header = (Freelist_Allocation_Header *)((char *)ptr - sizeof(Freelist_Allocation_Header));
+    header = (Freelist_Allocation_Header *)((uintptr_t)ptr - sizeof(Freelist_Allocation_Header));
 
     // the actual header comes after padding.
-    free_node = (Freelist_Node *)((char *)header - header->alignment_padding);
+    free_node = (Freelist_Node *)((uintptr_t)header - header->alignment_padding);
     free_node->block_size = header->block_size;
     free_node->next = NULL;
 
@@ -285,7 +293,7 @@ void
 freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free_node)
 {
     if ((free_node->next != NULL) &&
-        (void *)((char *)free_node + free_node->block_size) == free_node->next)
+        (void *)((uintptr_t)free_node + free_node->block_size) == free_node->next)
     {
         free_node->block_size += free_node->next->block_size;
         assert(fl->block_count >= 2);
@@ -293,7 +301,7 @@ freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free
     }
 
     if ((prev_node != NULL && prev_node->next != NULL) &&
-        (void *)((char *)prev_node + prev_node->block_size) == free_node)
+        (void *)((uintptr_t)prev_node + prev_node->block_size) == free_node)
     {
         prev_node->block_size += free_node->block_size;
         assert(fl->block_count >= 2);
@@ -327,7 +335,7 @@ freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment)
         return NULL;
     }
     size_t alloc_header_size = sizeof(Freelist_Allocation_Header);
-    Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((char *)ptr - alloc_header_size);
+    Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((uintptr_t)ptr - alloc_header_size);
     size_t header_align_padding = alloc_header_size + header->alignment_padding;
     size_t old_size             = header->block_size - header_align_padding;
     if (old_size == new_size) {
@@ -354,8 +362,7 @@ freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, si
     assert(fl != NULL && ptr != NULL);
 
     Freelist *freelist = (Freelist *)fl;
-    Freelist_Allocation_Header *alloc_header = (Freelist_Allocation_Header *)((char *)ptr -
-                                                                              sizeof(Freelist_Allocation_Header));
+    Freelist_Allocation_Header *alloc_header = (Freelist_Allocation_Header *)((uintptr_t)ptr - sizeof(Freelist_Allocation_Header));
     if (old_size < new_size)
     {
         size_t extra_space = new_size - old_size;
@@ -369,7 +376,7 @@ freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, si
                 const size_t remaining = curr->block_size - extra_space;
                 if (remaining >= sizeof(Freelist_Allocation_Header))
                 {
-                    Freelist_Node *new_node = (Freelist_Node *)((char *)curr + extra_space);
+                    Freelist_Node *new_node = (Freelist_Node *)((uintptr_t)curr + extra_space);
                     new_node->next = curr->next;
                     new_node->block_size = remaining;
                     if (prev) {
@@ -410,7 +417,7 @@ freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, si
             prev = curr;
             curr = curr->next;
         }
-        char *addr_after_allocation = (char *)ptr + old_size;
+        uintptr_t addr_after_allocation = (uintptr_t)ptr + old_size;
         if ((uintptr_t)curr == (uintptr_t)(addr_after_allocation)) {
             // lining up
             size_t new_block_size = curr->block_size + free_space;
@@ -436,7 +443,7 @@ freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, si
     assert(alloc_header->block_size > free_space);
     alloc_header->block_size -= free_space;
 
-    Freelist_Node *new_node = (Freelist_Node *)((char *)ptr + new_size);
+    Freelist_Node *new_node = (Freelist_Node *)((uintptr_t)ptr + new_size);
     new_node->block_size = free_space;
     new_node->next = NULL;
 
@@ -454,14 +461,14 @@ freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, si
     freelist_node_insert(freelist, prev, new_node);
 
     if (new_node->next &&
-        (char *)new_node + new_node->block_size == (char *)new_node->next)
+        (uintptr_t)new_node + new_node->block_size == (uintptr_t)new_node->next)
     {
         new_node->block_size += new_node->next->block_size;
         freelist_node_remove(freelist, new_node, new_node->next);
     }
 
     if (prev &&
-        (char *)prev + prev->block_size == (char *)new_node)
+        (uintptr_t)prev + prev->block_size == (uintptr_t)new_node)
     {
         prev->block_size += new_node->block_size;
         freelist_node_remove(freelist, prev, new_node);
@@ -543,8 +550,9 @@ validate_freelist_order(Freelist *fl)
     {
         // Verify addresses are in ascending order
         assert((uintptr_t)current < (uintptr_t)current->next);
-        // Verify no overlapping blocks
-        assert((uintptr_t)current + current->block_size <= (uintptr_t)current->next);
+        // Verify no overlapping blocks, and they should not be equal since that would be a bug(freenodes
+        // side-by-side should have been merged)
+        assert((uintptr_t)current + current->block_size < (uintptr_t)current->next);
         current = current->next;
     }
 }

@@ -148,7 +148,8 @@
         "rb_tree.h": "c",
         "common.h": "c",
         "buddy_alloc.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "set.h": "c"
     },
     "files.trimTrailingWhitespace": true,
     "editor.renderLineHighlight": "all",

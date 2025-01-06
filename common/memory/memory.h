@@ -44,6 +44,12 @@ typedef struct alloc_api {
     size_t alignment;
 } alloc_api;
 
+bool is_power_of_2(uintptr_t x);
+uintptr_t align_forward(uintptr_t ptr, size_t align);
+size_t calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size);
+
+
+
 bool
 is_power_of_2(uintptr_t x)
 {
@@ -74,7 +80,7 @@ align_forward(uintptr_t ptr, size_t align)
 size_t
 calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
 {
-    uintptr_t p, a, modulo, padding;
+    uintptr_t p, a, modulo, padding, needed_space;
     // assert(is_power_of_2(alignment));
     // Example: if header_size is 38, and padding for ptr to be aligned is 5(say)
     // then extra space needed is 38-5 = 33, alignment should be on 16 byte boundary(say)
@@ -89,8 +95,8 @@ calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
     padding = 0;
     if (modulo != 0)
         padding = a - modulo;
+    needed_space = (uintptr_t)header_size;
 
-    uintptr_t needed_space = (uintptr_t)header_size;
     // if alignemnt padding accomodates the needed size.
     if (padding < needed_space)
     {

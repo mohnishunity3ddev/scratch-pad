@@ -4,8 +4,6 @@
 #include "memory/memory.h"
 #include "common.h"
 
-// #define RBT_IMPLEMENTATION
-// #define RBT_UNIT_TESTS
 #define node_not_null(n) (n != NULL && !rbt_is_nil_sentinel_internal(n))
 #define node_null(n) (n == NULL || rbt_is_nil_sentinel_internal(n))
 
@@ -17,15 +15,17 @@ enum rbt_color
 };
 
 typedef struct rbt_node {
+    struct rbt_node *left,
+                    *right,
+                    *parent;
     int key;
     char color;
-    struct rbt_node *left, *right, *parent;
 } rbt_node;
 
+static rbt_node nil_node;
 typedef struct rbt {
     rbt_node *root;
     const alloc_api *api;
-    rbt_node nil_node;
 } rbt;
 
 rbt rbt_create_tree(const alloc_api *api);
@@ -33,10 +33,12 @@ void rbt_insert_key(rbt *t, int key);
 void rbt_remove_key(rbt *t, int key);
 
 #ifdef RBT_UNIT_TESTS
-void red_black_tree_test();
+void rbt_unit_tests();
 #endif
 
 #ifdef RBT_IMPLEMENTATION
+#include <stdio.h>
+
 static inline bool
 rbt_is_nil_sentinel_internal(const rbt_node *node)
 {
@@ -199,7 +201,7 @@ rbt_insert_internal(rbt *t, rbt_node *z)
 
     // insert like a normal BST
     rbt_node *x = t->root;
-    rbt_node *prev_x = &t->nil_node;
+    rbt_node *prev_x = &nil_node;
     while (!rbt_is_nil_sentinel_internal(x)) {
         if (z->key == x->key) { return; }
         prev_x = x;
@@ -219,15 +221,15 @@ rbt_insert_internal(rbt *t, rbt_node *z)
         prev_x->right = z;
     }
 
-    z->left = &t->nil_node;
-    z->right = &t->nil_node;
+    z->left = &nil_node;
+    z->right = &nil_node;
     // color the new node red as per convention
     z->color = RBT_COLOR_RED;
 
     // rebalance according to red-black rules.
     rbt_insert_fix_internal(t, z);
 
-    assert(rbt_is_nil_sentinel_internal(&t->nil_node));
+    assert(rbt_is_nil_sentinel_internal(&nil_node));
 }
 
 // - - - - - - - - - - - - - - - - - - -
@@ -389,7 +391,7 @@ rbt_remove_node_internal(rbt *t, rbt_node *z)
         rbt_remove_fixup_internal(t, x);
     }
 
-    assert(rbt_is_nil_sentinel_internal(&t->nil_node));
+    assert(rbt_is_nil_sentinel_internal(&nil_node));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -401,9 +403,9 @@ rbt_create_tree(const alloc_api *api)
 {
     rbt t = {};
     t.api = api;
-    t.nil_node.color = RBT_COLOR_BLACK;
-    t.nil_node.key = SINT32_MAX;
-    t.root = &t.nil_node;
+    nil_node.color = RBT_COLOR_BLACK;
+    nil_node.key = SINT32_MAX;
+    t.root = &nil_node;
     return t;
 }
 
@@ -433,12 +435,27 @@ rbt_remove_key(rbt *t, int key)
 }
 
 #ifdef RBT_UNIT_TESTS
+
 #ifndef FREELIST_ALLOCATOR_IMPLEMENTATION
 #define FREELIST_ALLOCATOR_IMPLEMENTATION
 #endif
-
 #include "memory/freelist_alloc.h"
-#include "containers/queue.h"
+
+#ifndef STACK_IMPLEMENTATION
+#define STACK_IMPLEMENTATION
+#endif
+#include "stack.h"
+
+#ifndef DARR_IMPLEMENTATION
+#define DARR_IMPLEMENTATION
+#endif
+#include "darr.h"
+
+#ifndef QUEUE_IMPLEMENTATION
+#define QUEUE_IMPLEMENTATION
+#endif
+#include "queue.h"
+
 #include <math.h>
 
 int
@@ -465,7 +482,6 @@ print_stack(const stack_voidp *s)
     printf("TOP.\n");
 }
 
-#include "darr.h"
 
 static unsigned int
 get_path_black_height(const darr_voidp *path)
@@ -723,8 +739,8 @@ rbt_display_tree(const rbt *t, const alloc_api *api)
             qpush_p(&q, r->right);
         } else {
             printf("%*c", width_per_item, ' ');
-            qpush_p(&q, &t->nil_node);
-            qpush_p(&q, &t->nil_node);
+            qpush_p(&q, &nil_node);
+            qpush_p(&q, &nil_node);
         }
 
         if (--level_ctr_max == 0) {
@@ -911,7 +927,7 @@ rbt_validate_tree(const rbt *t, bool enumerate_paths, bool display_tree, const a
 #include <time.h>
 #define max_num 1000000
 void
-red_black_tree_test()
+rbt_unit_tests()
 {
     Freelist fl;
     size_t mem_size = 512 * 1024 * 1024;

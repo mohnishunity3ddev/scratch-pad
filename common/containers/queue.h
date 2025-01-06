@@ -45,8 +45,9 @@ QUEUE_API_DEFAULT(int)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
+// #define QUEUE_IMPLEMENTATION
 #ifdef QUEUE_IMPLEMENTATION
+#include <stdio.h>
 #define QUEUE_API_IMPL(T, name)                                                                                   \
     static void queue_##name##_expand(queue_##name *q)                                                            \
     {                                                                                                             \

@@ -1,0 +1,16 @@
+CompileFlags:
+  Add: [ -DFREELIST_ALLOCATOR_IMPLEMENTATION,
+         -DHASHTABLE_IMPLEMENTATION,
+         -DSTRING32_IMPLEMENTATION,
+         -DSTACK_IMPLEMENTATION,
+         -DQUEUE_IMPLEMENTATION,
+         -DRBT_IMPLEMENTATION,
+         -DPOOL_ALLOCATOR_IMPLEMENTATION,
+         -DDARR_IMPLEMENTATION,
+         -DAVL_IMPLEMENTATION,
+         -DSTB_SPRINTF_IMPLEMENTATION,
+         -Wno-declaration-after-statement,
+         -Wno-newline-eof,
+         -Wall, -Wextra, -Wpedantic, -Weverything,
+        #  -DFREELIST_ALLOCATOR_UNIT_TESTS,
+       ]

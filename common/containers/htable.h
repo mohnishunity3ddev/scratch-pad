@@ -71,10 +71,10 @@ DEFAULT_FUNCS(float, float)
     bool ht_remove_key_##name(htable_##name *ht, const tkey key_to_remove);                                       \
     void ht_clear_##name(htable_##name *ht);                                                                      \
     void ht_delete_##name(htable_##name *ht)
-#define HTABLE_TEMP_DEFAULT(tkey, tval) HTABLE_API(tkey, tval, ##tkey##_##tval)
 
 HTABLE_API(string32 *, float, str_float);
 HTABLE_API(string32 *, string32 *, str_str);
+
 
 #ifdef HASHTABLE_IMPLEMENTATION
 #define HTABLE_API_IMPL(tkey, tval, tkey_name, tval_name, name)                                                   \
@@ -335,16 +335,15 @@ HTABLE_API(string32 *, string32 *, str_str);
         ht->entries = NULL;                                                                                       \
         ht->capacity = 0;                                                                                         \
     }
-
+#define HTABLE_API_IMPL_PTR(TKey, TVal, name) HTABLE_API_IMPL(TKey*, TVal*, TKey, TVal, name)
 #include <hash_helpers.h>
 #include <stdio.h>
-HTABLE_API_IMPL(string32 *, float, string32, float, str_float)
-HTABLE_API_IMPL(string32 *, string32 *, string32, string32, str_str)
+HTABLE_API_IMPL(string32*, float, string32, float, str_float)
+HTABLE_API_IMPL_PTR(string32, string32, str_str)
 
 #ifdef HASHTABLE_UNIT_TESTS
 #include <float.h>
 #include <math.h>
-
 static void
 test_hashtable_simple(Freelist *fl)
 {
