@@ -2,7 +2,64 @@ cmake_minimum_required(VERSION 3.22.0)
 
 project(scratch_pad C)
 
+# Custom target for cpuid
+add_custom_target(cpuid ALL
+    COMMAND clang -std=c11 ${CMAKE_SOURCE_DIR}/tools/cpuid.c -o ${CMAKE_BINARY_DIR}/tools/cpuid.exe -O3
+    COMMENT "Building cpuid.exe with Clang (Release build)"
+    VERBATIM
+)
+
+# Ensure the output directory exists
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tools)
+
 set(EXTERN_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external)
+
+# Include the module to check compiler flags
+include(CheckCCompilerFlag)
+
+function(check_and_define flag define_name message_text)
+    # Path to the cpuid tool
+    set(CPUID_TOOL "${CMAKE_BINARY_DIR}/tools/cpuid.exe")
+
+    # Run the cpuid tool with the desired feature as the first argument
+    execute_process(
+        COMMAND "${CPUID_TOOL}" "${message_text}"
+        OUTPUT_VARIABLE CPUID_OUTPUT
+        ERROR_VARIABLE CPUID_ERROR
+        RESULT_VARIABLE CPUID_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if (CPUID_RESULT EQUAL 0)
+        # If the cpuid tool confirms support, check compiler flag
+        check_c_compiler_flag("${flag}" HAS_FLAG)
+        if (HAS_FLAG)
+            add_compile_options("${flag}")
+            add_definitions("-D${define_name}")
+            message(STATUS "${message_text} detected.")
+        else()
+            message(STATUS "${message_text} not supported.")
+        endif()
+    else()
+        # cpuid.exe returned a failure
+        message(STATUS "${message_text} not supported.")
+    endif()
+endfunction()
+
+# Check for instruction set support
+check_and_define("-msse" HAS_SSE "sse")
+check_and_define("-msse2" HAS_SSE2 "sse2")
+check_and_define("-msse3" HAS_SSE3 "sse3")
+check_and_define("-msse4.1" HAS_SSE4_1 "sse41")
+check_and_define("-msse4.2" HAS_SSE4_2 "sse42")
+check_and_define("-mavx" HAS_AVX "avx")
+check_and_define("-mavx2" HAS_AVX2 "avx2")
+
+# Check for AVX-512 subsets
+check_and_define("-mavx512f" HAS_AVX512F "avx512f")
+check_and_define("-mavx512dq" HAS_AVX512DQ "avx512dq")
+check_and_define("-mavx512bw" HAS_AVX512BW "avx512bw")
+check_and_define("-mavx512vl" HAS_AVX512VL "avx512vl")
 
 # set(CMAKE_CXX_STANDARD 20) # this does nothing for MSVC, use target_compile_options below
 # set(CMAKE_CXX_STANDARD_REQUIRED ON)

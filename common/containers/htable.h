@@ -4,6 +4,7 @@
 #include <common.h>
 #include <memory/memory.h>
 #include <containers/string_utils.h>
+#include <stdint.h>
 
 #define HTABLE_LOAD_FACTOR_CHECK(ht) (float)((ht)->count + 1) / (float)((ht)->capacity)
 #define DEFAULT_FUNCS(T, name)                                                                                    \
@@ -72,9 +73,14 @@ DEFAULT_FUNCS(float, float)
     void ht_clear_##name(htable_##name *ht);                                                                      \
     void ht_delete_##name(htable_##name *ht)
 
-HTABLE_API(string32 *, float, str_float);
-HTABLE_API(string32 *, string32 *, str_str);
-
+#define htinit(name,pTable,cap,LF,maxLF,seed,api) ht_init_##name(pTable,cap,LF,maxLF,seed,api)
+#define htpush(name,pTable,k,v) ht_add_##name(pTable,k,v)
+#define htget(name,pTable,k,v) ht_get_##name(pTable,k,v)
+#define htkeyexists(name,pTable,k) ht_key_exists_##name(pTable,k)
+#define htresize(name,pTable,newCap) ht_resize_##name(pTable,newCap)
+#define htdel(name,pTable,k) ht_remove_key_##name(pTable,k)
+#define htclear(name,pTable) ht_clear_##name(pTable)
+#define htdestroy(name,pTable) ht_delete_##name(pTable)
 
 #ifdef HASHTABLE_IMPLEMENTATION
 #define HTABLE_API_IMPL(tkey, tval, tkey_name, tval_name, name)                                                   \
@@ -98,7 +104,6 @@ HTABLE_API(string32 *, string32 *, str_str);
         ht->max_load_factor = max_load_factor;                                                                    \
         ht->api = api;                                                                                            \
         ht->tombstone = (tkey)2;                                                                                  \
-                                                                                                                  \
         ht->funcs.key_comparator_func = tkey_name##_compare;                                                      \
         ht->funcs.key_copy_func = tkey_name##_dup;                                                                \
         ht->funcs.key_free_func = tkey_name##_free;                                                               \
@@ -107,7 +112,6 @@ HTABLE_API(string32 *, string32 *, str_str);
         ht->funcs.value_display_func = tval_name##_to_string;                                                     \
         ht->funcs.value_free_func = tval_name##_free;                                                             \
         ht->funcs.value_copy_func = tval_name##_dup;                                                              \
-                                                                                                                  \
         ht->entries = shalloc_arr(ht->api, htable_entry_##name, initial_capacity);                                \
         memset(ht->entries, 0, sizeof(htable_entry_##name) * initial_capacity);                                   \
     }                                                                                                             \
@@ -116,16 +120,15 @@ HTABLE_API(string32 *, string32 *, str_str);
     {                                                                                                             \
         unsigned int hash = ht->funcs.key_hash_func(key_to_find, ht->seed);                                       \
         unsigned int index = hash & (ht->capacity - 1);                                                           \
-                                                                                                                  \
         htable_entry_##name *curr = ht->entries + index;                                                          \
         htable_entry_##name *iter = curr;                                                                         \
         bool found = false;                                                                                       \
-        if (iter->ht_key.key != NULL)                                                                             \
+        if (iter->ht_key.key != (tkey)0)                                                                          \
         {                                                                                                         \
             do                                                                                                    \
             {                                                                                                     \
                 tkey key = iter->ht_key.key;                                                                      \
-                if (key != NULL && key != ht->tombstone && ht->funcs.key_comparator_func(key, key_to_find))       \
+                if (key != (tkey)0 && key != ht->tombstone && ht->funcs.key_comparator_func(key, key_to_find))    \
                 {                                                                                                 \
                     found = true;                                                                                 \
                     if (out_entry_index != NULL)                                                                  \
@@ -134,12 +137,10 @@ HTABLE_API(string32 *, string32 *, str_str);
                     }                                                                                             \
                     break;                                                                                        \
                 }                                                                                                 \
-                                                                                                                  \
                 index = (index + 1) & (ht->capacity - 1);                                                         \
                 iter = ht->entries + index;                                                                       \
             } while (iter != curr);                                                                               \
         }                                                                                                         \
-                                                                                                                  \
         return found;                                                                                             \
     }                                                                                                             \
                                                                                                                   \
@@ -164,15 +165,13 @@ HTABLE_API(string32 *, string32 *, str_str);
         }                                                                                                         \
         unsigned int hash = ht->funcs.key_hash_func(key, ht->seed);                                               \
         unsigned int index = hash & (ht->capacity - 1);                                                           \
-                                                                                                                  \
         htable_entry_##name *entry = ht->entries + index;                                                         \
         htable_entry_##name *start_entry = entry;                                                                 \
         tkey k = entry->ht_key.key;                                                                               \
         bool found = false;                                                                                       \
-                                                                                                                  \
         do                                                                                                        \
         {                                                                                                         \
-            if (k == NULL || k == ht->tombstone)                                                                  \
+            if (k == (tkey)0 || k == ht->tombstone)                                                               \
             {                                                                                                     \
                 break;                                                                                            \
             }                                                                                                     \
@@ -185,7 +184,6 @@ HTABLE_API(string32 *, string32 *, str_str);
             entry = ht->entries + index;                                                                          \
             k = entry->ht_key.key;                                                                                \
         } while (entry != start_entry);                                                                           \
-                                                                                                                  \
         if (!found)                                                                                               \
         {                                                                                                         \
             htable_key_##name *hkey = &entry->ht_key;                                                             \
@@ -198,7 +196,6 @@ HTABLE_API(string32 *, string32 *, str_str);
         {                                                                                                         \
             ht->funcs.value_free_func(entry->value, ht->api);                                                     \
         }                                                                                                         \
-                                                                                                                  \
         entry->value = ht->funcs.value_copy_func(value, ht->api);                                                 \
     }                                                                                                             \
                                                                                                                   \
@@ -207,7 +204,6 @@ HTABLE_API(string32 *, string32 *, str_str);
         size_t index = 0;                                                                                         \
         bool found = ht_find_entry_##name(ht, key_to_search, &index);                                             \
         htable_entry_##name *entry = ht->entries + index;                                                         \
-                                                                                                                  \
         if (found && out_value_ptr != NULL)                                                                       \
         {                                                                                                         \
             *out_value_ptr = entry->value;                                                                        \
@@ -220,16 +216,14 @@ HTABLE_API(string32 *, string32 *, str_str);
     void ht_add_rehash_##name(htable_##name *ht, const htable_key_##name *key, tval value)                        \
     {                                                                                                             \
         unsigned int index = key->hash & (ht->capacity - 1);                                                      \
-                                                                                                                  \
         htable_entry_##name *entry = ht->entries + index;                                                         \
         tkey k = entry->ht_key.key;                                                                               \
-        while (k != NULL && k != ht->tombstone)                                                                   \
+        while (k != (tkey)0 && k != ht->tombstone)                                                                \
         {                                                                                                         \
             index = (index + 1) & (ht->capacity - 1);                                                             \
             entry = ht->entries + index;                                                                          \
             k = entry->ht_key.key;                                                                                \
         }                                                                                                         \
-                                                                                                                  \
         entry->ht_key.key = key->key;                                                                             \
         entry->ht_key.hash = key->hash;                                                                           \
         entry->value = value;                                                                                     \
@@ -242,24 +236,21 @@ HTABLE_API(string32 *, string32 *, str_str);
         htable_entry_##name *old_entries = ht->entries;                                                           \
         size_t old_count = ht->count;                                                                             \
         size_t old_cap = ht->capacity;                                                                            \
-                                                                                                                  \
         ht->capacity = new_capacity;                                                                              \
         ht->count = 0;                                                                                            \
         ht->entries = shalloc_arr(ht->api, htable_entry_##name, new_capacity);                                    \
         memset(ht->entries, 0, sizeof(htable_entry_##name) * ht->capacity);                                       \
-                                                                                                                  \
         if (old_entries != NULL)                                                                                  \
         {                                                                                                         \
             for (size_t i = 0; i < old_cap; ++i)                                                                  \
             {                                                                                                     \
                 htable_entry_##name *entry = old_entries + i;                                                     \
                 tkey key = entry->ht_key.key;                                                                     \
-                if (key != NULL && key != ht->tombstone)                                                          \
+                if (key != (tkey)0 && key != ht->tombstone)                                                       \
                 {                                                                                                 \
                     ht_add_rehash_##name(ht, &entry->ht_key, entry->value);                                       \
                 }                                                                                                 \
             }                                                                                                     \
-                                                                                                                  \
             assert(ht->count == old_count);                                                                       \
             shfree(ht->api, old_entries);                                                                         \
         }                                                                                                         \
@@ -276,13 +267,10 @@ HTABLE_API(string32 *, string32 *, str_str);
             printf("The key '%s' is not present in the hashtable.\n", buffer);                                    \
             return false;                                                                                         \
         }                                                                                                         \
-                                                                                                                  \
         assert(index != 0xffffffffffffffffULL);                                                                   \
         htable_entry_##name *entry = ht->entries + index;                                                         \
-                                                                                                                  \
         ht->funcs.key_free_func(entry->ht_key.key, ht->api);                                                      \
         ht->funcs.value_free_func(entry->value, ht->api);                                                         \
-                                                                                                                  \
         entry->ht_key.key = ht->tombstone;                                                                        \
         entry->value = 0;                                                                                         \
         ht->count--;                                                                                              \
@@ -290,7 +278,6 @@ HTABLE_API(string32 *, string32 *, str_str);
         {                                                                                                         \
             ht_resize_##name(ht, ht->capacity / 2);                                                               \
         }                                                                                                         \
-                                                                                                                  \
         return found;                                                                                             \
     }                                                                                                             \
                                                                                                                   \
@@ -301,7 +288,7 @@ HTABLE_API(string32 *, string32 *, str_str);
         {                                                                                                         \
             htable_entry_##name *entry = ht->entries + i;                                                         \
             tkey key = entry->ht_key.key;                                                                         \
-            if (key != NULL && key != ht->tombstone)                                                              \
+            if (key != (tkey)0 && key != ht->tombstone)                                                           \
             {                                                                                                     \
                 char buffer[128];                                                                                 \
                 ht->funcs.key_display_func(key, buffer, sizeof(buffer));                                          \
@@ -318,7 +305,7 @@ HTABLE_API(string32 *, string32 *, str_str);
         for (size_t i = 0; i < ht->capacity; ++i)                                                                 \
         {                                                                                                         \
             tkey key = ht->entries[i].ht_key.key;                                                                 \
-            if (key != NULL && key != ht->tombstone)                                                              \
+            if (key != (tkey)0 && key != ht->tombstone)                                                           \
             {                                                                                                     \
                 ht->funcs.key_free_func(key, ht->api);                                                            \
                 ht->funcs.value_free_func(ht->entries[i].value, ht->api);                                         \
@@ -336,14 +323,32 @@ HTABLE_API(string32 *, string32 *, str_str);
         ht->capacity = 0;                                                                                         \
     }
 #define HTABLE_API_IMPL_PTR(TKey, TVal, name) HTABLE_API_IMPL(TKey*, TVal*, TKey, TVal, name)
-#include <hash_helpers.h>
+
 #include <stdio.h>
-HTABLE_API_IMPL(string32*, float, string32, float, str_float)
-HTABLE_API_IMPL_PTR(string32, string32, str_str)
+unsigned int
+uintptr_hash(const uintptr_t n, unsigned int seed)
+{
+    unsigned int result = seed;
+    result ^= n;
+    result *= 16777619;
+    return result;
+}
+
+DEFAULT_FUNCS(uintptr_t, uintptr)
+HTABLE_API(uintptr_t, uintptr_t, ptr_ptr);
+HTABLE_API_IMPL(uintptr_t, uintptr_t, uintptr, uintptr, ptr_ptr)
 
 #ifdef HASHTABLE_UNIT_TESTS
 #include <float.h>
 #include <math.h>
+
+#include <hash_helpers.h>
+
+HTABLE_API(string32 *, float, str_float);
+HTABLE_API(string32 *, string32 *, str_str);
+HTABLE_API_IMPL(string32 *, float, string32, float, str_float)
+HTABLE_API_IMPL_PTR(string32, string32, str_str)
+
 static void
 test_hashtable_simple(Freelist *fl)
 {
@@ -419,7 +424,7 @@ test_hashtable_simple(Freelist *fl)
     string32 not_present = string32_create("Not there!", api);
     assert(ht_get_str_float(&table, &not_present, NULL) == false);
     assert(ht_key_exists_str_float(&table, &not_present) == false);
-    string32_cstr_free(&not_present, api);
+    string32_free(&not_present, api);
 
     assert(ht_remove_key_str_float(&table, &k1));
     // ht_display_str_float(&table);
@@ -435,14 +440,14 @@ test_hashtable_simple(Freelist *fl)
     // ht_display_str_float(&table);
 
     ht_delete_str_float(&table);
-    string32_cstr_free(&k1, api);
-    string32_cstr_free(&k2, api);
-    string32_cstr_free(&k3, api);
-    string32_cstr_free(&k4, api);
-    string32_cstr_free(&k5, api);
-    string32_cstr_free(&k6, api);
-    string32_cstr_free(&k7, api);
-    string32_cstr_free(&k8, api);
+    string32_free(&k1, api);
+    string32_free(&k2, api);
+    string32_free(&k3, api);
+    string32_free(&k4, api);
+    string32_free(&k5, api);
+    string32_free(&k6, api);
+    string32_free(&k7, api);
+    string32_free(&k8, api);
 
     printf("Hashtable Simple Test Passed!\n");
 }
@@ -490,18 +495,18 @@ test_hashtable_str_str(Freelist *fl)
     ht_delete_str_str(&table);
     assert(fl->used == used2);
 
-    string32_cstr_free(&name_label, api);
-    string32_cstr_free(&age_label, api);
-    string32_cstr_free(&school_label, api);
-    string32_cstr_free(&occupation_label, api);
-    string32_cstr_free(&name, api);
-    string32_cstr_free(&age, api);
-    string32_cstr_free(&school, api);
-    string32_cstr_free(&occupation, api);
-    string32_cstr_free(&ayu_name, api);
-    string32_cstr_free(&ayu_age, api);
-    string32_cstr_free(&ayu_school, api);
-    string32_cstr_free(&ayu_occupation, api);
+    string32_free(&name_label, api);
+    string32_free(&age_label, api);
+    string32_free(&school_label, api);
+    string32_free(&occupation_label, api);
+    string32_free(&name, api);
+    string32_free(&age, api);
+    string32_free(&school, api);
+    string32_free(&occupation, api);
+    string32_free(&ayu_name, api);
+    string32_free(&ayu_age, api);
+    string32_free(&ayu_school, api);
+    string32_free(&ayu_occupation, api);
     assert(fl->used == used1);
 
     printf("Simple Tests for string string table passed!\n");
@@ -599,7 +604,7 @@ test_hashtable_basic_operations(const alloc_api *api)
     ht_delete_str_float(&table);
     for (int i = 0; i < 10; i++)
     {
-        string32_cstr_free(&keys[i], api);
+        string32_free(&keys[i], api);
     }
 }
 
@@ -641,10 +646,10 @@ test_hashtable_edge_cases(const alloc_api *api)
 
         // Cleanup
         ht_delete_str_float(&table);
-        string32_cstr_free(&key_min, api);
-        string32_cstr_free(&key_max, api);
-        string32_cstr_free(&key_nan, api);
-        string32_cstr_free(&key_inf, api);
+        string32_free(&key_min, api);
+        string32_free(&key_max, api);
+        string32_free(&key_nan, api);
+        string32_free(&key_inf, api);
     }
 
     // Very long key test
@@ -665,7 +670,7 @@ test_hashtable_edge_cases(const alloc_api *api)
         TEST_ASSERT(retrieved_value == 42.0f, "Verify long key value");
 
         ht_delete_str_float(&table);
-        string32_cstr_free(&long_key, api);
+        string32_free(&long_key, api);
     }
 
     // Null value retrieval
@@ -685,8 +690,8 @@ test_hashtable_edge_cases(const alloc_api *api)
                     "Retrieve nonexistent key with NULL value pointer");
 
         ht_delete_str_float(&table);
-        string32_cstr_free(&key, api);
-        string32_cstr_free(&non_key, api);
+        string32_free(&key, api);
+        string32_free(&non_key, api);
     }
 }
 
@@ -729,7 +734,7 @@ test_hashtable_resize_and_clear(const alloc_api *api)
         ht_delete_str_float(&table);
         for (int i = 0; i < 20; i++)
         {
-            string32_cstr_free(&keys[i], api);
+            string32_free(&keys[i], api);
         }
     }
 
@@ -776,7 +781,7 @@ test_hashtable_resize_and_clear(const alloc_api *api)
         ht_delete_str_float(&table);
         for (int i = 0; i < 10; i++)
         {
-            string32_cstr_free(&keys[i], api);
+            string32_free(&keys[i], api);
         }
     }
 }
@@ -874,7 +879,7 @@ test_hashtable_resize_and_removals(alloc_api *api)
     ht_delete_str_float(&table);
     for (int i = 0; i < 20; i++)
     {
-        string32_cstr_free(&keys[i], api);
+        string32_free(&keys[i], api);
     }
 
     printf("Hashtable Resize and Operations Test PASSED!\n");
@@ -914,7 +919,7 @@ test_hashtable_stress_test(const alloc_api *api)
     ht_delete_str_float(&table);
     for (int i = 0; i < STRESS_TEST_SIZE; i++)
     {
-        string32_cstr_free(&keys[i], api);
+        string32_free(&keys[i], api);
     }
     free(keys);
 }

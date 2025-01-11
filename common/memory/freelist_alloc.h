@@ -16,11 +16,6 @@ typedef struct Freelist_Node {
     size_t block_size;
 } Freelist_Node;
 
-typedef enum Placement_Policy {
-    PLACEMENT_POLICY_FIND_FIRST,
-    PLACEMENT_POLICY_FIND_BEST,
-} Placement_Policy;
-
 typedef struct Freelist Freelist;
 
 #define freelist_create(fl, sz, align, pol)                                                                       \

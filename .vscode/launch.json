@@ -11,6 +11,17 @@
             "cwd": "${fileDirname}",
             "environment": [],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "(Windows) cpuid Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/bin/tools/cpuid.exe",
+            "args": ["sse2"],
+            "stopAtEntry": true,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "console": "integratedTerminal"
         }
     ]
 }

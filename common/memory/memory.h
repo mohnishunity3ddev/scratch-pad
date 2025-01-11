@@ -1,6 +1,13 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#ifdef HAS_SSE2
+#include <emmintrin.h>
+#endif
+#ifdef HAS_AVX
+#include <immintrin.h>
+#endif
+
 #include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -17,6 +24,11 @@
 #define MEGABYTES(mb) (KILOBYTES((mb))*1024)
 #define GIGABYTES(gb) (MEGABYTES((gb))*1024)
 
+typedef enum Placement_Policy
+{
+    PLACEMENT_POLICY_FIND_FIRST,
+    PLACEMENT_POLICY_FIND_BEST,
+} Placement_Policy;
 
 #define shalloc_a(api,sz,a) (api != NULL ? api->alloc_align(api->allocator, sz, a) : malloc(sz))
 #define shalloc(api,sz) shalloc_a(api, sz, api->alignment)
@@ -110,6 +122,45 @@ calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
     }
 
     return (size_t)padding;
+}
+
+
+void
+shumemcpy(void *destination, const void *src, size_t size)
+{
+    unsigned char *d = (unsigned char *)destination;
+    const unsigned char *s = (const unsigned char *)src;
+
+#ifdef HAS_AVX512F
+    while (size >= 64) {
+        __m512i chunk = _mm512_loadu_si512((const __m512i *)s);
+        _mm512_storeu_si512((__m512i *)d, chunk);
+        s += 64; d += 64; size -= 64;
+    }
+#endif
+#if defined(HAS_AVX)
+    while (size >= 32) {
+        __m256i chunk = _mm256_loadu_si256((const __m256i *)s);
+        _mm256_storeu_si256((__m256i *)d, chunk);
+        s += 32; d += 32; size -= 32;
+    }
+#endif
+#if defined(HAS_SSE2)
+    while (size >= 16) {
+        __m128i chunk = _mm_load_si128((const __m128i *)s);
+        _mm_storeu_si128((__m128i *)d, chunk);
+        s += 16; d += 16; size -= 16;
+    }
+#endif
+    while(size >= 8) {
+        *((uint64_t*)d) = *((uint64_t*)s);
+        s += 8; d += 8; size -= 8;
+    }
+
+    while (size > 0) {
+        *d++ = *s++;
+        size--;
+    }
 }
 
 #endif

@@ -29,6 +29,8 @@ void        string32_modify(string32 *s, const char *c_str, const alloc_api *all
 string32     string32_dup_char(const string32 *s, const alloc_api *alloc_api_);
 string32    *string32_dup(const string32 *s, const alloc_api *api);
 void         string32_cstr_free(string32 *s, const alloc_api *alloc_api_);
+void         string32_free(string32 *s, const alloc_api *api);
+
 string32     string32_to_lower(const string32 *s, const alloc_api *api);
 
 unsigned int string32_hash(const string32 *str, unsigned int seed);

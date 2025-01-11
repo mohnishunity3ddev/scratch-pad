@@ -26,7 +26,7 @@
 #define arrpush(a,t,v) darr_##t##_push(a,v)
 #define arrget(a,t,i) darr_##t##_get(a,i)
 #define arrput(a,t,i,v) darr_##t##_update(a,i,v)
-#define arrdel(a,t,i) darr_##t##_remove_at(a,i)
+#define arrdel(a,t,i) darr_##t##_remove_at(a,i)0
 #define arrprint(a,t) darr_##t##_print(a)
 
 #define arrinit_p(api) darr_voidp_create(api)

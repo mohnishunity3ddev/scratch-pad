@@ -1,5 +1,7 @@
 CompileFlags:
-  Add: [ -DFREELIST_ALLOCATOR_IMPLEMENTATION,
+  Add: [ -std=c11,
+         -DFREELIST2_ALLOCATOR_IMPLEMENTATION,
+         -DFREELIST_ALLOCATOR_IMPLEMENTATION,
          -DHASHTABLE_IMPLEMENTATION,
          -DSTRING32_IMPLEMENTATION,
          -DSTACK_IMPLEMENTATION,
@@ -9,8 +11,12 @@ CompileFlags:
          -DDARR_IMPLEMENTATION,
          -DAVL_IMPLEMENTATION,
          -DSTB_SPRINTF_IMPLEMENTATION,
+         -DHAS_AVX, -DHAS_AVX2,
+         -DHAS_SSE2, -DHAS_SSE3,-DHAS_SSE4_1, -DHAS_SSE4_2,
          -Wno-declaration-after-statement,
          -Wno-newline-eof,
-         -Wall, -Wextra, -Wpedantic, -Weverything,
-        #  -DFREELIST_ALLOCATOR_UNIT_TESTS,
+         -mavx2, -mavx, -msse, -msse2, -msse3, -msse4.1, -msse4.2,
+        #  -Wall, -Wextra, -Wpedantic, -Weverything,
+         -DFREELIST2_ALLOCATOR_UNIT_TESTS,
+         -DFREELIST_ALLOCATOR_UNIT_TESTS,
        ]

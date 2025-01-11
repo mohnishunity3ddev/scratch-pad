@@ -1,6 +1,9 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <stdint.h>
+#include <string.h>
+
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
 #ifdef SINT32_MAX
