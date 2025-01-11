@@ -39,9 +39,18 @@
 #include <containers/rb_tree.h>
 
 
-
+#include <windows.h>
 int main() {
+    LARGE_INTEGER frequency, start, end;
+    double elapsed_time;
+    QueryPerformanceFrequency(&frequency);
+
+    QueryPerformanceCounter(&start);
     freelist_unit_tests();
     freelist2_unit_tests();
+    QueryPerformanceCounter(&end);
+    elapsed_time += (double)(end.QuadPart - start.QuadPart) * 1000.0 / frequency.QuadPart;
+
+    printf("Elapsed time: %.3f milliseconds\n", elapsed_time/1000.0);
     return 0;
 }

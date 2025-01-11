@@ -17,6 +17,6 @@ CompileFlags:
          -Wno-newline-eof,
          -mavx2, -mavx, -msse, -msse2, -msse3, -msse4.1, -msse4.2,
         #  -Wall, -Wextra, -Wpedantic, -Weverything,
-         -DFREELIST2_ALLOCATOR_UNIT_TESTS,
-         -DFREELIST_ALLOCATOR_UNIT_TESTS,
+        #  -DFREELIST2_ALLOCATOR_UNIT_TESTS,
+        #  -DFREELIST_ALLOCATOR_UNIT_TESTS,
        ]

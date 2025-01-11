@@ -250,7 +250,7 @@ freelist2_alloc_align(void *fl, size_t size, size_t alignment)
     }
 
     if (node == NULL) {
-        printf("Freelist2 does not have enough memory.\n");
+        // printf("Freelist2 does not have enough memory.\n");
         return NULL;
     }
 
@@ -374,13 +374,13 @@ freelist2_realloc(void *fl, void *ptr, size_t new_size)
     if ((uintptr_t)ptr < (uintptr_t)(freelist->data) ||
         (uintptr_t)ptr > ((uintptr_t)freelist->data + (uintptr_t)freelist->size))
     {
-        printf("Out of Bounds Memory Access!\n");
+        // printf("Out of Bounds Memory Access!\n");
         return NULL;
     }
 
     Freelist2_Allocation_Header *header = freelist2_get_header(ptr);
     if ((uintptr_t)ptr % header->alignment_requirement != 0) {
-        printf("Misaligned memory!\n");
+        // printf("Misaligned memory!\n");
         return NULL;
     }
     size_t header_align_padding = sizeof(Freelist2_Allocation_Header) + header->alignment_padding;
@@ -395,7 +395,7 @@ freelist2_realloc(void *fl, void *ptr, size_t new_size)
     if ((new_size > old_size) &&
         (new_size - old_size) > (remaining_space - sizeof(Freelist2_Allocation_Header)))
     {
-        printf("Not enough space in the backing buffer!\n");
+        // printf("Not enough space in the backing buffer!\n");
         return NULL;
     }
 
@@ -687,7 +687,7 @@ freelist2_verify_blocks(Freelist2 *fl, size_t *exp_free_sizes, int exp_block_cou
     while (curr && curr->next)
     {
         if (print_block_size) {
-            printf("%zu-->", curr->block_size);
+            // printf("%zu-->", curr->block_size);
         }
         assert(exp_free_sizes[counter] == curr->block_size);
         curr = curr->next;
@@ -695,7 +695,7 @@ freelist2_verify_blocks(Freelist2 *fl, size_t *exp_free_sizes, int exp_block_cou
     }
     assert(counter + 1 == exp_block_count);
     if (print_block_size) {
-        printf(".\n");
+        // printf(".\n");
     }
 }
 
@@ -749,7 +749,7 @@ freelist2_validate_memory(Freelist2 *fl, void *base_addr, size_t total_size)
 void
 freelist2_realloc_tests()
 {
-    printf("Running realloc tests ...\n");
+    // printf("Running realloc tests ...\n");
 
     // Initialize with 1MB of memory
     const size_t mem_size = 1024 * 1024;
@@ -761,7 +761,7 @@ freelist2_realloc_tests()
     freelist2_init(&fl, memory, mem_size, DEFAULT_ALIGNMENT);
     alloc_api *api = &fl.api;
 
-    printf("1. Shrink down realloc test...\n");
+    // printf("1. Shrink down realloc test...\n");
     {
         size_t old_p1_size = 128;
         unsigned char *p1 = (unsigned char *)freelist2_alloc(&fl, old_p1_size);
@@ -815,7 +815,7 @@ freelist2_realloc_tests()
         freelist2_test_initial_state(&fl);
     }
 
-    printf("2. Basic realloc tests...\n");
+    // printf("2. Basic realloc tests...\n");
     {
         // Test growing allocation
         void *ptr1 = freelist2_alloc(&fl, 128);
@@ -847,7 +847,7 @@ freelist2_realloc_tests()
         freelist2_test_initial_state(&fl);
     }
 
-    printf("3. Edge case tests...\n");
+    // printf("3. Edge case tests...\n");
     {
         // NULL ptr (should behave like alloc)
         void *ptr1 = freelist2_realloc(&fl, NULL, 128);
@@ -879,7 +879,7 @@ freelist2_realloc_tests()
         freelist2_test_initial_state(&fl);
     }
 
-    printf("4. Mixed allocation pattern tests...\n");
+    // printf("4. Mixed allocation pattern tests...\n");
     {
         void *ptrs[10] = {NULL};
         size_t sizes[10] = {64, 128, 256, 512, 1024, 32, 96, 160, 384, 768};
@@ -930,7 +930,7 @@ freelist2_realloc_tests()
     freelist2_free_all(&fl);
     freelist2_test_initial_state(&fl);
     free(memory);
-    printf("All realloc tests passed successfully!\n");
+    // printf("All realloc tests passed successfully!\n");
 }
 
 void
@@ -1130,13 +1130,13 @@ freelist2_fragmentation_tests()
 
     // Cleanup
     free(memory);
-    printf("fragmentation tests passed successfully!\n\n");
+    // printf("fragmentation tests passed successfully!\n\n");
 }
 
 void
 freelist2_alignment_tests()
 {
-    printf("freelist alignment tests!\n");
+    // printf("freelist alignment tests!\n");
 
     // Initialize with 64MB of memory
     const size_t mem_size = 64 * 1024 * 1024;
@@ -1156,7 +1156,7 @@ freelist2_alignment_tests()
 
     const size_t alloc_header_size = sizeof(Freelist2_Allocation_Header);
 
-    printf("1. Basic allocation tests with different alignments...\n");
+    // printf("1. Basic allocation tests with different alignments...\n");
     {
         // exhaust all the memory available
         size_t size = mem_size;
@@ -1272,7 +1272,7 @@ freelist2_alignment_tests()
 
 
     freelist2_free_all(&fl);
-    printf("2. Mixed size and alignment tests...\n");
+    // printf("2. Mixed size and alignment tests...\n");
     {
         struct {
             size_t size;
@@ -1365,7 +1365,7 @@ freelist2_alignment_tests()
 
     assert((fl.block_count == 1) && (fl.used == 0) && (fl.head->block_size == mem_size));
     freelist2_free_all(&fl);
-    printf("3. Alignment stress tests...\n");
+    // printf("3. Alignment stress tests...\n");
     {
         // Test worst-case alignment scenarios
         const size_t max_alignment = 4096;
@@ -1417,7 +1417,7 @@ freelist2_alignment_tests()
 
     assert((fl.block_count == 1) && (fl.used == 0) && (fl.head->block_size == mem_size));
     free(memory);
-    printf("All alignment tests passed successfully!\n");
+    // printf("All alignment tests passed successfully!\n");
 }
 
 // -------------------------------------------------------------------------------------------------------------------
@@ -1463,7 +1463,7 @@ void freelist2_test_alternating_patterns() {
     TestAllocation allocations[100];
     int pattern = 0;
 
-    printf("Test 1: Alternating allocations and frees...\n");
+    // printf("Test 1: Alternating allocations and frees...\n");
 
     // Create a checker-board pattern of allocations
     for (int i = 0; i < 100; i++) {
@@ -1501,7 +1501,7 @@ void freelist2_test_random_sizes() {
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
-    printf("Test 2: Random allocation sizes...\n");
+    // printf("Test 2: Random allocation sizes...\n");
 
     TestAllocation allocations[MAX_ALLOCATIONS];
     int active_allocations = 0;
@@ -1548,7 +1548,7 @@ void freelist2_test_maximum_fragmentation() {
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
-    printf("Test 3: Maximum fragmentation...\n");
+    // printf("Test 3: Maximum fragmentation...\n");
 
     TestAllocation allocations[MAX_ALLOCATIONS];
     int count = 0;
@@ -1596,7 +1596,7 @@ void freelist2_test_alignments() {
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
-    printf("Test 4: Testing different alignments...\n");
+    // printf("Test 4: Testing different alignments...\n");
 
     TestAllocation allocations[100];
     int count = 0;
@@ -1644,7 +1644,7 @@ void freelist2_test_alignments() {
 
 // Test 5: Fibonacci-based allocation pattern
 void freelist2_test_fibonacci_pattern() {
-    printf("Test 5: Fibonacci pattern allocations...\n");
+    // printf("Test 5: Fibonacci pattern allocations...\n");
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
@@ -1686,7 +1686,7 @@ void freelist2_test_fibonacci_pattern() {
 
 // Test 6: Prime number sized allocations
 void freelist2_test_prime_sizes() {
-    printf("Test 6: Prime-sized allocations...\n");
+    // printf("Test 6: Prime-sized allocations...\n");
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
@@ -1731,7 +1731,7 @@ void freelist2_test_prime_sizes() {
 
 // Test 7: Pyramid pattern
 void freelist2_test_pyramid_pattern() {
-    printf("Test 7: Pyramid pattern allocations...\n");
+    // printf("Test 7: Pyramid pattern allocations...\n");
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
@@ -1780,7 +1780,7 @@ void freelist2_test_pyramid_pattern() {
 
 // Test 8: Extreme alignment requirements
 void freelist2_test_extreme_alignments() {
-    printf("Test 8: Extreme alignment requirements...\n");
+    // printf("Test 8: Extreme alignment requirements...\n");
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
@@ -1823,7 +1823,7 @@ void freelist2_test_extreme_alignments() {
 
 // Test 9: Interlaced allocations
 void freelist2_test_interlaced_pattern() {
-    printf("Test 9: Interlaced allocation pattern...\n");
+    // printf("Test 9: Interlaced allocation pattern...\n");
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
@@ -1864,7 +1864,7 @@ void freelist2_test_interlaced_pattern() {
 void
 freelist2_test_fragmentation_recovery()
 {
-    printf("Test 10: Testing fragmentation recovery...\n");
+    // printf("Test 10: Testing fragmentation recovery...\n");
     Freelist2 fl = {};
     freelist2_init(&fl, malloc(MEMORY_SIZE), MEMORY_SIZE, DEFAULT_ALIGNMENT);
 
@@ -1876,10 +1876,10 @@ freelist2_test_fragmentation_recovery()
     size_t overhead_per_alloc = sizeof(Freelist2_Allocation_Header);
     size_t total_size_per_alloc = allocation_unit + overhead_per_alloc;
 
-    printf("\tMemory stats:\n");
-    printf("\t- Total memory: %zu bytes\n", (size_t)MEMORY_SIZE);
-    printf("\t- Size per allocation: %zu bytes (minimum: %zu, header: %zu)\n",
-           total_size_per_alloc, allocation_unit, overhead_per_alloc);
+    // printf("\tMemory stats:\n");
+    // printf("\t- Total memory: %zu bytes\n", (size_t)MEMORY_SIZE);
+    // printf("\t- Size per allocation: %zu bytes (minimum: %zu, header: %zu)\n",
+        //    total_size_per_alloc, allocation_unit, overhead_per_alloc);
 
     // Let's fill up most of the memory, leaving just enough space for our test
     size_t target_usage = MEMORY_SIZE * 0.95; // Use 95% of memory
@@ -1898,9 +1898,9 @@ freelist2_test_fragmentation_recovery()
             count++;
 
             if (count % 500 == 0) {
-                printf("\tMade %d allocations, memory used: %zu bytes (%.1f%%)\n",
-                       count, total_allocated,
-                       (total_allocated * 100.0) / MEMORY_SIZE);
+                // printf("\tMade %d allocations, memory used: %zu bytes (%.1f%%)\n",
+                    //    count, total_allocated,
+                    //    (total_allocated * 100.0) / MEMORY_SIZE);
             }
         }
         else
@@ -1909,11 +1909,11 @@ freelist2_test_fragmentation_recovery()
         }
     }
 
-    printf("\n\tInitial state:\n");
-    printf("\t- Created %d allocations\n", count);
-    printf("\t- Total allocated: %zu bytes (%.1f%%)\n",
-           total_allocated, (total_allocated * 100.0) / MEMORY_SIZE);
-    printf("\t- Free space: %zu bytes\n", freelist2_remaining_space(&fl));
+    // printf("\n\tInitial state:\n");
+    // printf("\t- Created %d allocations\n", count);
+    // printf("\t- Total allocated: %zu bytes (%.1f%%)\n",
+        //    total_allocated, (total_allocated * 100.0) / MEMORY_SIZE);
+    // printf("\t- Free space: %zu bytes\n", freelist2_remaining_space(&fl));
 
     // Free alternating blocks to create fragmentation
     int freed_count = 0;
@@ -1925,8 +1925,8 @@ freelist2_test_fragmentation_recovery()
     }
 
     size_t space_after_free = freelist2_remaining_space(&fl);
-    printf("\n\tAfter freeing %d blocks:\n", freed_count);
-    printf("\t- Free space: %zu bytes\n", space_after_free);
+    // printf("\n\tAfter freeing %d blocks:\n", freed_count);
+    // printf("\t- Free space: %zu bytes\n", space_after_free);
 
     // Now try to allocate half of our total free space - this should fail due to fragmentation
     size_t large_size = space_after_free - sizeof(Freelist2_Allocation_Header) - DEFAULT_ALIGNMENT;
@@ -1942,11 +1942,11 @@ freelist2_test_fragmentation_recovery()
     test_ptr = freelist2_alloc(&fl, large_size);
     freelist2_set_allocation_owner(&fl, test_ptr, &test_ptr);
     if (test_ptr == NULL) {
-        printf("\tFailed to allocate %zu bytes after defragmentation!\n", large_size);
+        // printf("\tFailed to allocate %zu bytes after defragmentation!\n", large_size);
         assert(false && "Post-defragmentation allocation should succeed");
     }
 
-    printf("\n\tSuccessfully allocated %zu bytes after defragmentation\n", large_size);
+    // printf("\n\tSuccessfully allocated %zu bytes after defragmentation\n", large_size);
 
     // Verify remaining allocations are still intact
     int verified = 0;
@@ -1958,7 +1958,7 @@ freelist2_test_fragmentation_recovery()
         }
     }
 
-    printf("\tVerified %d original allocations remain intact\n", verified);
+    // printf("\tVerified %d original allocations remain intact\n", verified);
 
     free(fl.data);
 }
@@ -2066,7 +2066,7 @@ void freelist2_test_realloc() {
         assert(a != NULL);
         freelist2_free_all(&fl);
     }
-    printf("All realloc tests completed successfully!\n");
+    // printf("All realloc tests completed successfully!\n");
 }
 
 void

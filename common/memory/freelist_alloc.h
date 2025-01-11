@@ -204,7 +204,7 @@ freelist_alloc_align(void *fl, size_t size, size_t alignment)
     }
 
     if (node == NULL) {
-        printf("Freelist does not have enough memory.\n");
+        // printf("Freelist does not have enough memory.\n");
         return NULL;
     }
 
@@ -319,14 +319,14 @@ freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment)
     }
 
     if ((uintptr_t)ptr % alignment != 0) {
-        printf("Misaligned memory!\n");
+        // printf("Misaligned memory!\n");
         return NULL;
     }
     Freelist *freelist = (Freelist *)fl;
     if ((uintptr_t)ptr < (uintptr_t)(freelist->data) ||
         (uintptr_t)ptr > ((uintptr_t)freelist->data + (uintptr_t)freelist->size))
     {
-        printf("Out of Bounds Memory Access!\n");
+        // printf("Out of Bounds Memory Access!\n");
         return NULL;
     }
     size_t alloc_header_size = sizeof(Freelist_Allocation_Header);
@@ -341,7 +341,7 @@ freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment)
     if ((new_size > old_size) &&
         (new_size - old_size) > (remaining_space - sizeof(Freelist_Allocation_Header)))
     {
-        printf("Not enough space in the backing buffer!\n");
+        // printf("Not enough space in the backing buffer!\n");
         return NULL;
     }
 
@@ -525,7 +525,7 @@ verify_freelist_blocks(Freelist *fl, size_t *exp_free_sizes, int exp_block_count
     while (curr && curr->next)
     {
         if (print_block_size) {
-            printf("%zu-->", curr->block_size);
+            // printf("%zu-->", curr->block_size);
         }
         assert(exp_free_sizes[counter] == curr->block_size);
         curr = curr->next;
@@ -533,7 +533,7 @@ verify_freelist_blocks(Freelist *fl, size_t *exp_free_sizes, int exp_block_count
     }
     assert(counter + 1 == exp_block_count);
     if (print_block_size) {
-        printf(".\n");
+        // printf(".\n");
     }
 }
 
@@ -587,7 +587,7 @@ validate_freelist_memory(Freelist *fl, void *base_addr, size_t total_size)
 void
 freelist_realloc_tests()
 {
-    printf("Running realloc tests ...\n");
+    // printf("Running realloc tests ...\n");
 
     // Initialize with 1MB of memory
     const size_t mem_size = 1024 * 1024;
@@ -599,7 +599,7 @@ freelist_realloc_tests()
     freelist_init(&fl, memory, mem_size, DEFAULT_ALIGNMENT);
     alloc_api *api = &fl.api;
 
-    printf("1. Shrink down realloc test...\n");
+    // printf("1. Shrink down realloc test...\n");
     {
         size_t old_p1_size = 128;
         unsigned char *p1 = (unsigned char *)freelist_alloc(&fl, old_p1_size);
@@ -653,7 +653,7 @@ freelist_realloc_tests()
         freelist_test_initial_state(&fl);
     }
 
-    printf("2. Basic realloc tests...\n");
+    // printf("2. Basic realloc tests...\n");
     {
         // Test growing allocation
         void *ptr1 = freelist_alloc(&fl, 128);
@@ -685,7 +685,7 @@ freelist_realloc_tests()
         freelist_test_initial_state(&fl);
     }
 
-    printf("3. Edge case tests...\n");
+    // printf("3. Edge case tests...\n");
     {
         // NULL ptr (should behave like alloc)
         void *ptr1 = freelist_realloc(&fl, NULL, 128, api->alignment);
@@ -717,7 +717,7 @@ freelist_realloc_tests()
         freelist_test_initial_state(&fl);
     }
 
-    printf("4. Mixed allocation pattern tests...\n");
+    // printf("4. Mixed allocation pattern tests...\n");
     {
         void *ptrs[10] = {NULL};
         size_t sizes[10] = {64, 128, 256, 512, 1024, 32, 96, 160, 384, 768};
@@ -764,7 +764,7 @@ freelist_realloc_tests()
         freelist_test_initial_state(&fl);
     }
 
-    printf("5. Basic realloc alignment tests...\n");
+    // printf("5. Basic realloc alignment tests...\n");
     {
         const size_t alignments[] = {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
         void *ptrs[10] = {NULL};
@@ -813,7 +813,7 @@ freelist_realloc_tests()
         freelist_test_initial_state(&fl);
     }
 
-    printf("6. Edge case alignment tests...\n");
+    // printf("6. Edge case alignment tests...\n");
     {
         // Test realloc with NULL pointer and alignment
         void *ptr1 = freelist_realloc(&fl, NULL, 128, 4096);
@@ -851,7 +851,7 @@ freelist_realloc_tests()
     freelist_free_all(&fl);
     freelist_test_initial_state(&fl);
     free(memory);
-    printf("All realloc tests passed successfully!\n");
+    // printf("All realloc tests passed successfully!\n");
 }
 
 void
@@ -1051,13 +1051,13 @@ freelist_fragmentation_tests()
 
     // Cleanup
     free(memory);
-    printf("fragmentation tests passed successfully!\n\n");
+    // printf("fragmentation tests passed successfully!\n\n");
 }
 
 void
 freelist_alignment_tests()
 {
-    printf("freelist alignment tests!\n");
+    // printf("freelist alignment tests!\n");
 
     // Initialize with 64MB of memory
     const size_t mem_size = 64 * 1024 * 1024;
@@ -1077,7 +1077,7 @@ freelist_alignment_tests()
 
     const size_t alloc_header_size = sizeof(Freelist_Allocation_Header);
 
-    printf("1. Basic allocation tests with different alignments...\n");
+    // printf("1. Basic allocation tests with different alignments...\n");
     {
         // exhaust all the memory available
         size_t size = mem_size;
@@ -1189,7 +1189,7 @@ freelist_alignment_tests()
 
 
     freelist_free_all(&fl);
-    printf("2. Mixed size and alignment tests...\n");
+    // printf("2. Mixed size and alignment tests...\n");
     {
         struct {
             size_t size;
@@ -1280,7 +1280,7 @@ freelist_alignment_tests()
 
     assert((fl.block_count == 1) && (fl.used == 0) && (fl.head->block_size == mem_size));
     freelist_free_all(&fl);
-    printf("3. Alignment stress tests...\n");
+    // printf("3. Alignment stress tests...\n");
     {
         // Test worst-case alignment scenarios
         const size_t max_alignment = 4096;
@@ -1332,7 +1332,7 @@ freelist_alignment_tests()
 
     assert((fl.block_count == 1) && (fl.used == 0) && (fl.head->block_size == mem_size));
     free(memory);
-    printf("All alignment tests passed successfully!\n");
+    // printf("All alignment tests passed successfully!\n");
 }
 
 void
