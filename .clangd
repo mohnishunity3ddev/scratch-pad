@@ -1,22 +1,45 @@
+# .clangd
+
 CompileFlags:
-  Add: [ -std=c11,
-         -DFREELIST2_ALLOCATOR_IMPLEMENTATION,
-         -DFREELIST_ALLOCATOR_IMPLEMENTATION,
-         -DHASHTABLE_IMPLEMENTATION,
-         -DSTRING32_IMPLEMENTATION,
-         -DSTACK_IMPLEMENTATION,
-         -DQUEUE_IMPLEMENTATION,
-         -DRBT_IMPLEMENTATION,
-         -DPOOL_ALLOCATOR_IMPLEMENTATION,
-         -DDARR_IMPLEMENTATION,
-         -DAVL_IMPLEMENTATION,
-         -DSTB_SPRINTF_IMPLEMENTATION,
-         -DHAS_AVX, -DHAS_AVX2,
-         -DHAS_SSE2, -DHAS_SSE3,-DHAS_SSE4_1, -DHAS_SSE4_2,
-         -Wno-declaration-after-statement,
-         -Wno-newline-eof,
-         -mavx2, -mavx, -msse, -msse2, -msse3, -msse4.1, -msse4.2,
-        #  -Wall, -Wextra, -Wpedantic, -Weverything,
-        #  -DFREELIST2_ALLOCATOR_UNIT_TESTS,
-        #  -DFREELIST_ALLOCATOR_UNIT_TESTS,
-       ]
+  Add:
+    - -x
+    - c++
+    - -std=c++20
+    - -D__cplusplus
+    - -DFREELIST2_ALLOCATOR_IMPLEMENTATION
+    - -DFREELIST_ALLOCATOR_IMPLEMENTATION
+    - -DFREELIST_ALLOCATOR_UNIT_TESTS
+    - -DHASHTABLE_IMPLEMENTATION
+    - -DSTRING32_IMPLEMENTATION
+    - -DSTACK_IMPLEMENTATION
+    - -DQUEUE_IMPLEMENTATION
+    - -DRBT_IMPLEMENTATION
+    - -DPOOL_ALLOCATOR_IMPLEMENTATION
+    - -DDARR_IMPLEMENTATION
+    - -DAVL_IMPLEMENTATION
+    - -DSTB_SPRINTF_IMPLEMENTATION
+    - -DHAS_AVX
+    - -DHAS_AVX2
+    - -DHAS_SSE2
+    - -DHAS_SSE3
+    - -DHAS_SSE4_1
+    - -DHAS_SSE4_2
+    - -Wno-macro-redefined
+    - -Wno-declaration-after-statement
+    - -Wno-newline-eof
+    - -mavx2
+    - -mavx
+    - -msse
+    - -msse2
+    - -msse3
+    - -msse4.1
+    - -msse4.2
+    - -DSTRING32_UNIT_TESTS
+    - -DMUTABLE_STRINGS
+    # Uncomment if you want more warnings:
+    # - -Wall
+    # - -Wextra
+    # - -Wpedantic
+    # - -Weverything
+    # - -DFREELIST2_ALLOCATOR_UNIT_TESTS
+    # - -DFREELIST_ALLOCATOR_UNIT_TESTS

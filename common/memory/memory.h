@@ -20,6 +20,20 @@
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 #endif
 
+static char stringBuffer[512];
+#ifdef _DEBUG
+#include <stdio.h>
+inline const char *
+// getLabel(const char *s, const char *filename, int lineNumber)
+getLabel(const char *s)
+{
+    memset(stringBuffer, 0, 512);
+    // snprintf(stringBuffer, 512, "%s, File: %s, Line: %d", s/*, filename, lineNumber*/);
+    snprintf(stringBuffer, 512, "%s", s);
+    return stringBuffer;
+}
+#endif
+
 #define KILOBYTES(kb) ((kb)*1024)
 #define MEGABYTES(mb) (KILOBYTES((mb))*1024)
 #define GIGABYTES(gb) (MEGABYTES((gb))*1024)
@@ -31,7 +45,7 @@ typedef enum Placement_Policy
 } Placement_Policy;
 
 #define shalloc_a(api,sz,a) (api != NULL ? api->alloc_align(api->allocator, sz, a) : malloc(sz))
-#define shalloc(api,sz) shalloc_a(api, sz, api->alignment)
+#define shalloc(api,sz) shalloc_a(api, sz, DEFAULT_ALIGNMENT)
 #define shrealloc_a(api,p,sz,a) (api != NULL ? api->realloc_align(api->allocator, p, sz, a) : realloc(p,sz))
 #define shrealloc(api,p,sz) shrealloc_a(api,p,sz,api->alignment)
 #define shfree(api,p) (api != NULL) ? api->free(api->allocator,p) : free(p)
@@ -42,12 +56,14 @@ typedef enum Placement_Policy
 typedef void *(*alloc_fn)(void *allocator, size_t size);
 typedef void *(*alloc_align_fn)(void *allocator, size_t size, size_t alignment);
 typedef void *(*realloc_align_fn)(void *allocator, void *ptr, size_t new_size, size_t alignment);
+typedef void *(*realloc_fn)(void *allocator, void *ptr, size_t new_size);
 typedef void  (*free_fn)(void *allocator, void *ptr);
 typedef void  (*free_all_fn)(void *allocator);
 
 typedef struct alloc_api {
     alloc_fn alloc;
     alloc_align_fn alloc_align;
+    realloc_fn realloc;
     realloc_align_fn realloc_align;
     free_fn free;
     free_all_fn free_all;
@@ -62,14 +78,14 @@ size_t calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t heade
 
 
 
-bool
+inline bool
 is_power_of_2(uintptr_t x)
 {
     bool result = ((x & (x - 1)) == 0);
     return result;
 }
 
-uintptr_t
+inline uintptr_t
 align_forward(uintptr_t ptr, size_t align)
 {
     uintptr_t p, a, modulo;
@@ -125,7 +141,7 @@ calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
 }
 
 
-void
+inline void
 shumemcpy(void *destination, const void *src, size_t size)
 {
     unsigned char *d = (unsigned char *)destination;

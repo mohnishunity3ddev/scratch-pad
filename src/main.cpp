@@ -12,6 +12,7 @@
 // #define POOL_ALLOCATOR_UNIT_TEST
 // #include <memory/pool_alloc.h>
 #include "common.h"
+#include <corecrt_malloc.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,38 +20,52 @@
 #include <string.h>
 #include <memory/memory.h>
 
+#include "clock.h"
+#define STRING32_IMPLEMENTATION
+#include <containers/string_utils.h>
+
 #ifndef HASTHABLE_IMPLEMENTATION
 #define HASHTABLE_IMPLEMENTATION
 #endif
 #include <containers/htable.h>
 
-#define FREELIST_ALLOCATOR_UNIT_TESTS
+// #define FREELIST_ALLOCATOR_UNIT_TESTS
 #define FREELIST_ALLOCATOR_IMPLEMENTATION
 #include <memory/freelist_alloc.h>
-#define FREELIST2_ALLOCATOR_UNIT_TESTS
+// #define FREELIST2_ALLOCATOR_UNIT_TESTS
 #define FREELIST2_ALLOCATOR_IMPLEMENTATION
 #include <memory/freelist2_alloc.h>
 
-#define STRING32_IMPLEMENTATION
-#include <containers/string_utils.h>
-
+#include "memory/handle.h"
 
 #define RBT_IMPLEMENTATION
 #include <containers/rb_tree.h>
 
+#include "clock.h"
 
-#include <windows.h>
-int main() {
-    LARGE_INTEGER frequency, start, end;
-    double elapsed_time;
-    QueryPerformanceFrequency(&frequency);
+#include <utility>
 
-    QueryPerformanceCounter(&start);
-    freelist_unit_tests();
-    freelist2_unit_tests();
-    QueryPerformanceCounter(&end);
-    elapsed_time += (double)(end.QuadPart - start.QuadPart) * 1000.0 / frequency.QuadPart;
+int
+main()
+{
+    size_t memSize = 1024*1024;
+    void *memory = malloc(memSize);
 
-    printf("Elapsed time: %.3f milliseconds\n", elapsed_time/1000.0);
+#ifdef _DEBUG
+    handle_unit_tests(memory, memSize);
+#endif
+
+/*
+    Clock clock = Clock();
+    clock.begin("Start of main");
+    int numtests = 1000;
+    for (int i = 0; i < numtests; ++i) {
+        freelist_unit_tests();
+        freelist2_unit_tests();
+    }
+    clock.end();
+ */
+
+    free(memory);
     return 0;
 }

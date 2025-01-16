@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22.0)
 
-project(SharedUtils C)
+project(SharedUtils C CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 ###### generate project path in .h file inside commons folder.
 # configure_file(project_paths.h.in ${CMAKE_CURRENT_SOURCE_DIR}/project_paths.h @ONLY)
@@ -25,7 +28,7 @@ project(SharedUtils C)
 
 # -----------------------------------------------------------------------------------------------------------------------
 
-file(GLOB_RECURSE SRC_FILES     LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.c)
+file(GLOB_RECURSE SRC_FILES     LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.c *.cpp)
 file(GLOB_RECURSE HEADER_FILES  LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.h)
 
 if(NOT SRC_FILES STREQUAL "")

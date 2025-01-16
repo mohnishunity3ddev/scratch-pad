@@ -1,22 +1,22 @@
 [
-{
-  "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o common\\CMakeFiles\\SharedUtils.dir\\netcode\\ws.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\netcode\\ws.c\"",
-  "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\netcode\\ws.c"
-},
-{
-  "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o common\\CMakeFiles\\SharedUtils.dir\\oops\\set.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\oops\\set.c\"",
-  "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\oops\\set.c"
-},
-{
-  "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o common\\CMakeFiles\\SharedUtils.dir\\stb\\stb_vorbis.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\stb\\stb_vorbis.c\"",
-  "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\stb\\stb_vorbis.c"
-},
-{
-  "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
-  "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o src\\CMakeFiles\\scratch_pad.dir\\main.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\src\\main.c\"",
-  "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\src\\main.c"
-}
+    {
+        "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
+        "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DHAS_AVX -DHAS_AVX2 -DHAS_SSE -DHAS_SSE2 -DHAS_SSE3 -DHAS_SSE4_1 -DHAS_SSE4_2 -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -msse -msse2 -msse3 -msse4.1 -msse4.2 -mavx -mavx2 -o common\\CMakeFiles\\SharedUtils.dir\\netcode\\ws.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\netcode\\ws.c\"",
+        "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\netcode\\ws.c"
+    },
+    {
+        "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
+        "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DHAS_AVX -DHAS_AVX2 -DHAS_SSE -DHAS_SSE2 -DHAS_SSE3 -DHAS_SSE4_1 -DHAS_SSE4_2 -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -msse -msse2 -msse3 -msse4.1 -msse4.2 -mavx -mavx2 -o common\\CMakeFiles\\SharedUtils.dir\\oops\\set.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\oops\\set.c\"",
+        "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\oops\\set.c"
+    },
+    {
+        "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
+        "command": "C:\\PROGRA~1\\LLVM\\bin\\clang.exe -DDEBUG -DHAS_AVX -DHAS_AVX2 -DHAS_SSE -DHAS_SSE2 -DHAS_SSE3 -DHAS_SSE4_1 -DHAS_SSE4_2 -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -msse -msse2 -msse3 -msse4.1 -msse4.2 -mavx -mavx2 -o common\\CMakeFiles\\SharedUtils.dir\\stb\\stb_vorbis.c.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\stb\\stb_vorbis.c\"",
+        "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\common\\stb\\stb_vorbis.c"
+    },
+    {
+        "directory": "D:/Personal Projects/UsefulRepos/scratch_pad/bin",
+        "command": "C:\\PROGRA~1\\LLVM\\bin\\CLANG_~1.EXE -DDEBUG -DHAS_AVX -DHAS_AVX2 -DHAS_SSE -DHAS_SSE2 -DHAS_SSE3 -DHAS_SSE4_1 -DHAS_SSE4_2 -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -I\"D:/Personal Projects/UsefulRepos/scratch_pad/common\" -g -Xclang -gcodeview -O0 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -msse -msse2 -msse3 -msse4.1 -msse4.2 -mavx -mavx2 -std=c++14 -o src\\CMakeFiles\\scratch_pad.dir\\main.cpp.obj -c \"D:\\Personal Projects\\UsefulRepos\\scratch_pad\\src\\main.cpp\"",
+        "file": "D:\\Personal Projects\\UsefulRepos\\scratch_pad\\src\\main.cpp"
+    }
 ]

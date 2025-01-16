@@ -133,7 +133,7 @@ main(int argc, char **argv)
 {
     char *arg = argv[1];
     size_t len = strlen(arg);
-
+    printf("%s\n", arg);
     if (len == strlen("sse") && strcmpb(arg, "sse", strlen(arg))) {
         return !check_sse();
     } else if (len == strlen("sse2") && strcmpb(arg, "sse2", strlen(arg))) {

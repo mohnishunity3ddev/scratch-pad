@@ -16,7 +16,7 @@
             "name": "(Windows) cpuid Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/tools/cpuid.exe",
+            "program": "${workspaceRoot}/tools/cpuid.exe",
             "args": ["sse2"],
             "stopAtEntry": true,
             "cwd": "${fileDirname}",

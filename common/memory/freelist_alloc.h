@@ -60,7 +60,7 @@ Freelist_Node *freelist_find_best(Freelist *fl, size_t size, size_t alignment, s
                                   Freelist_Node **prev_node_);
 
 
-size_t freelist_block_size(void *ptr) {
+inline size_t freelist_block_size(void *ptr) {
     assert(ptr != NULL);
     Freelist_Allocation_Header *header = (Freelist_Allocation_Header *)((uintptr_t)ptr -
                                                                         sizeof(Freelist_Allocation_Header));
@@ -68,7 +68,7 @@ size_t freelist_block_size(void *ptr) {
     return result;
 }
 
-size_t
+inline size_t
 freelist_remaining_space(Freelist *fl)
 {
     Freelist_Node *curr = fl->head;
@@ -80,7 +80,7 @@ freelist_remaining_space(Freelist *fl)
     return space;
 }
 
-void
+inline void
 freelist_free_all(void *fl)
 {
     Freelist *freelist = (Freelist *)fl;
@@ -92,7 +92,7 @@ freelist_free_all(void *fl)
     freelist->block_count = 1;
 }
 
-void
+inline void
 freelist_init(Freelist *fl, void *data, size_t size, size_t alignment)
 {
     fl->data = data;
@@ -109,14 +109,14 @@ freelist_init(Freelist *fl, void *data, size_t size, size_t alignment)
     fl->api.allocator = (void *)fl;
 }
 
-alloc_api *
+inline alloc_api *
 freelist_get_api(Freelist *fl)
 {
     alloc_api *api = &fl->api;
     return api;
 }
 
-Freelist_Node *
+inline Freelist_Node *
 freelist_find_first(Freelist *fl, size_t size, size_t alignment, size_t *padding_, Freelist_Node **prev_node_)
 {
     Freelist_Node *node = fl->head;
@@ -140,7 +140,7 @@ freelist_find_first(Freelist *fl, size_t size, size_t alignment, size_t *padding
     return node;
 }
 
-Freelist_Node *
+inline Freelist_Node *
 freelist_find_best(Freelist *fl, size_t size, size_t alignment, size_t *padding_, Freelist_Node **prev_node_)
 {
     size_t smallest_diff = ~(size_t)0;
@@ -170,13 +170,13 @@ freelist_find_best(Freelist *fl, size_t size, size_t alignment, size_t *padding_
     return best_node;
 }
 
-void *
+inline void *
 freelist_alloc(void *fl, size_t size)
 {
     return freelist_alloc_align(fl, size, DEFAULT_ALIGNMENT);
 }
 
-void *
+inline void *
 freelist_alloc_align(void *fl, size_t size, size_t alignment)
 {
     assert(fl != NULL);
@@ -244,7 +244,7 @@ freelist_alloc_align(void *fl, size_t size, size_t alignment)
 
 void freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free_node);
 
-void
+inline void
 freelist_free(void *fl, void *ptr)
 {
     assert(fl != NULL && ptr != NULL);
@@ -284,7 +284,7 @@ freelist_free(void *fl, void *ptr)
     }
 }
 
-void
+inline void
 freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free_node)
 {
     if ((free_node->next != NULL) &&
@@ -305,7 +305,7 @@ freelist_coalescence(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *free
     assert(fl->block_count > 0);
 }
 
-void *
+inline void *
 freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment)
 {
     assert(fl != NULL);
@@ -351,7 +351,7 @@ freelist_realloc(void *fl, void *ptr, size_t new_size, size_t alignment)
     return new_ptr;
 }
 
-void *
+inline void *
 freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, size_t alignment)
 {
     assert(fl != NULL && ptr != NULL);
@@ -472,7 +472,7 @@ freelist_realloc_sized(void *fl, void *ptr, size_t old_size, size_t new_size, si
     return ptr;
 }
 
-void
+inline void
 freelist_node_insert(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *new_node)
 {
     assert(prev_node != new_node);
@@ -495,7 +495,7 @@ freelist_node_insert(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *new_
     assert(fl->block_count > 0);
 }
 
-void
+inline void
 freelist_node_remove(Freelist *fl, Freelist_Node *prev_node, Freelist_Node *del_node)
 {
     if (prev_node == NULL) {
@@ -576,15 +576,14 @@ validate_used_memory(Freelist *fl, void *base_addr, size_t total_size)
     assert(fl->used <= total_size);
 }
 
-void
+static void
 validate_freelist_memory(Freelist *fl, void *base_addr, size_t total_size)
 {
     validate_freelist_order(fl);
     validate_used_memory(fl, base_addr, total_size);
 }
 
-
-void
+static void
 freelist_realloc_tests()
 {
     // printf("Running realloc tests ...\n");
@@ -854,12 +853,12 @@ freelist_realloc_tests()
     // printf("All realloc tests passed successfully!\n");
 }
 
-void
+static void
 freelist_fragmentation_tests()
 {
     // Setup 64MB memory pool with BEST FIT policy
     const size_t MEM_SIZE = 64 * 1024 * 1024; // 64 MB
-    uint8_t *memory = malloc(MEM_SIZE);
+    uint8_t *memory = (uint8_t *)malloc(MEM_SIZE);
     Freelist fl;
     freelist_init(&fl, memory, MEM_SIZE, DEFAULT_ALIGNMENT);
     fl.policy = PLACEMENT_POLICY_FIND_BEST;
@@ -1054,7 +1053,7 @@ freelist_fragmentation_tests()
     // printf("fragmentation tests passed successfully!\n\n");
 }
 
-void
+static void
 freelist_alignment_tests()
 {
     // printf("freelist alignment tests!\n");
@@ -1320,7 +1319,7 @@ freelist_alignment_tests()
         } else {
             assert((uintptr_t)ptr3 + sizeof(Freelist_Node) <= (uintptr_t)ptr2);
         }
-
+        
         freelist_free(&fl, ptr1);
         freelist_free(&fl, ptr2);
         freelist_free(&fl, ptr3);
@@ -1335,7 +1334,7 @@ freelist_alignment_tests()
     // printf("All alignment tests passed successfully!\n");
 }
 
-void
+inline void
 freelist_unit_tests()
 {
     freelist_alignment_tests();

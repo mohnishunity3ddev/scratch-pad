@@ -1,6 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -9,6 +13,10 @@
 #ifdef SINT32_MAX
 #error "This should not be defined"
 #undef SINT32_MAX
+#endif
+
+#ifdef __cplusplus
+#define restrict __restrict__
 #endif
 
 #define SINT32_MAX 2147483647

@@ -2,13 +2,12 @@
 #define STRING_UTILS_H
 
 #include "memory/memory.h"
+#include "common.h"
 #include <stdio.h>
 
 static alloc_api *alloc_api_global = {NULL};
 
-typedef struct string32 string32;
-struct string32
-{
+typedef struct string32 {
     union {
         char *mem;
         char sso_string[8];
@@ -17,7 +16,8 @@ struct string32
     unsigned int length;
     unsigned int capacity;
     bool is_sso;
-};
+    bool is_managed = true;
+} string32;
 
 void string32_set_global_allocator(alloc_api *api);
 
@@ -28,6 +28,7 @@ void        string32_modify(string32 *s, const char *c_str, const alloc_api *all
 #endif
 string32     string32_dup_char(const string32 *s, const alloc_api *alloc_api_);
 string32    *string32_dup(const string32 *s, const alloc_api *api);
+
 void         string32_cstr_free(string32 *s, const alloc_api *alloc_api_);
 void         string32_free(string32 *s, const alloc_api *api);
 
@@ -42,14 +43,14 @@ bool         string32_is_null_or_empty(const string32 *s);
 
 char        char_to_lower(char c);
 
-void string32_set_global_allocator(alloc_api *api) { alloc_api_global = api; }
+inline void string32_set_global_allocator(alloc_api *api) { alloc_api_global = api; }
 
 #ifdef STRING32_UNIT_TESTS
 void string32_unit_tests();
 #endif
 
 #ifdef STRING32_IMPLEMENTATION
-string32
+inline string32
 string32_create(const char *c_str, const alloc_api *api)
 {
     string32 str = {};
@@ -62,7 +63,7 @@ string32_create(const char *c_str, const alloc_api *api)
     ++len;
     if (len > 8) {
         if (api == NULL) api = alloc_api_global;
-        str.data.mem = shalloc_arr(api, char, len);
+        str.data.mem = (char *)shalloc(api, len);
         assert(str.data.mem != NULL);
         str.capacity = len;
         str.length = len - 1;
@@ -78,7 +79,7 @@ string32_create(const char *c_str, const alloc_api *api)
 }
 
 #ifdef MUTABLE_STRINGS
-void
+inline void
 string32_append(string32 *s, const char *c_str, const alloc_api *api)
 {
     size_t lenA = s->length;
@@ -110,7 +111,7 @@ string32_append(string32 *s, const char *c_str, const alloc_api *api)
     }
 }
 
-void
+inline void
 string32_modify(string32 *s, const char *c_str, const alloc_api *api)
 {
     size_t len = strnlen_s(c_str, UINT_MAX);
@@ -146,7 +147,7 @@ string32_modify(string32 *s, const char *c_str, const alloc_api *api)
 }
 #endif
 
-string32
+inline string32
 string32_dup_char(const string32 *s, const alloc_api *api)
 {
     assert(s != NULL);
@@ -168,29 +169,30 @@ string32_dup_char(const string32 *s, const alloc_api *api)
     return result;
 }
 
-string32 *
-string32_dup(const string32 *s, const alloc_api *api)
+inline string32 *
+string32_dup(const string32 *string_to_copy, const alloc_api *api)
 {
-    assert(s != NULL);
+    assert(string_to_copy != NULL);
     string32* result = shalloc_t(api, string32);
-    if (s->is_sso) {
-        memcpy_s(result, sizeof(string32), s, sizeof(string32));
+    if (string_to_copy->is_sso) {
+        memcpy_s(result, sizeof(string32), string_to_copy, sizeof(string32));
     } else {
-        assert(s->data.mem != NULL);
+        assert(string_to_copy->data.mem != NULL);
         if (api == NULL)
             api = alloc_api_global;
 
-        result->data.mem = shalloc_arr(api, char, s->length+1);
-        strcpy_s(result->data.mem, s->capacity, s->data.mem);
-        result->capacity = s->capacity;
+        result->data.mem = shalloc_arr(api, char, string_to_copy->length+1);
+        strcpy_s(result->data.mem, string_to_copy->capacity, string_to_copy->data.mem);
+        result->capacity = string_to_copy->capacity;
         result->is_sso = false;
-        result->length = s->length;
+        result->length = string_to_copy->length;
     }
 
     return result;
 }
 
-unsigned int
+
+inline unsigned int
 string32_hash(const string32 *str, unsigned int seed)
 {
     unsigned int result = seed;
@@ -205,7 +207,7 @@ string32_hash(const string32 *str, unsigned int seed)
     return result;
 }
 
-bool
+inline bool
 string32_compare(const string32 *restrict s1, const string32 *restrict s2)
 {
     bool result = (s1->length == s2->length) && (s1->is_sso == s2->is_sso);
@@ -223,7 +225,20 @@ string32_compare(const string32 *restrict s1, const string32 *restrict s2)
     return result;
 }
 
-string32
+// don't like this sheeeeit.
+// TODO: constant time string comparison?
+inline bool
+string32_cstr_compare(const char *restrict cstr1, const char *restrict cstr2)
+{
+    int len1 = strlen(cstr1);
+    int len2 = strlen(cstr2);
+    if (len1 == len2 && *cstr1 == *cstr2) {
+        return strncmp(cstr1, cstr2, len1) == 0;
+    }
+    return false;
+}
+
+inline string32
 string32_to_lower(const string32 *s, const alloc_api *api)
 {
     if (api == NULL) {
@@ -234,28 +249,28 @@ string32_to_lower(const string32 *s, const alloc_api *api)
     return result;
 }
 
-const char *
+inline const char *
 string32_cstr(const string32 *s)
 {
     const char *cstr = s->is_sso ? s->data.sso_string : s->data.mem;
     return cstr;
 }
 
-void
+inline void
 string32_to_string(const string32 *s, char *buffer, size_t max_length)
 {
     assert((s->length+1 <= max_length) && "Buffer Length not enough for this string");
     snprintf(buffer, max_length, "%s", string32_cstr(s));
 }
 
-bool
+inline bool
 string32_is_null_or_empty(const string32 *s)
 {
     return  (s->data.sso_string[0] == '\0') ||
             (s->data.mem == NULL);
 }
 
-void
+inline void
 string32_cstr_free(string32 *s, const alloc_api *api)
 {
     if (api == NULL)
@@ -267,7 +282,9 @@ string32_cstr_free(string32 *s, const alloc_api *api)
     memset(s, 0, sizeof(*s));
 }
 
-void string32_free(string32 *s, const alloc_api *api) {
+inline void
+string32_free(string32 *s, const alloc_api *api)
+{
     if (s != NULL) {
         if (api == NULL)
             api = alloc_api_global;
@@ -279,7 +296,7 @@ void string32_free(string32 *s, const alloc_api *api) {
     }
 }
 
-char
+inline char
 char_to_lower(char c)
 {
     return c - 'a';

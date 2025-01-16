@@ -3,15 +3,18 @@
 
 #include <common.h>
 #include <memory/memory.h>
+#ifndef STRING32_IMPLEMENTATION
+#define STRING32_IMPLEMENTATION
+#endif
 #include <containers/string_utils.h>
 #include <stdint.h>
 
 #define HTABLE_LOAD_FACTOR_CHECK(ht) (float)((ht)->count + 1) / (float)((ht)->capacity)
 #define DEFAULT_FUNCS(T, name)                                                                                    \
-    bool name##_compare(T a, T b) { return a == b; }                                                              \
-    T name##_dup(const T k, const alloc_api *api) { return k; }                                                   \
-    void name##_free(T k, const alloc_api *api) {}                                                                \
-    void name##_to_string(T x, char *buffer, size_t max_len) { snprintf(buffer, max_len, GET_FORMAT_STR(x), x); }
+    inline bool name##_compare(T a, T b) { return a == b; }                                                              \
+    inline T name##_dup(const T k, const alloc_api *api) { return k; }                                                   \
+    inline void name##_free(T k, const alloc_api *api) {}                                                                \
+    inline void name##_to_string(T x, char *buffer, size_t max_len) { snprintf(buffer, max_len, GET_FORMAT_STR(x), x); }
 DEFAULT_FUNCS(float, float)
 
 #define HTABLE_API(tkey, tval, name)                                                                              \
@@ -80,12 +83,15 @@ DEFAULT_FUNCS(float, float)
 #define htresize(name,pTable,newCap) ht_resize_##name(pTable,newCap)
 #define htdel(name,pTable,k) ht_remove_key_##name(pTable,k)
 #define htclear(name,pTable) ht_clear_##name(pTable)
-#define htdestroy(name,pTable) ht_delete_##name(pTable)
+#define htdestroy(name, pTable) ht_delete_##name(pTable)
+
+DEFAULT_FUNCS(uintptr_t, uintptr)
+HTABLE_API(uintptr_t, uintptr_t, ptr_ptr);
 
 #ifdef HASHTABLE_IMPLEMENTATION
 #define HTABLE_API_IMPL(tkey, tval, tkey_name, tval_name, name)                                                   \
-    void ht_init_##name(htable_##name *ht, size_t initial_capacity, float min_load_factor, float max_load_factor, \
-                        unsigned int seed, const alloc_api *api)                                                  \
+    inline void ht_init_##name(htable_##name *ht, size_t initial_capacity, float min_load_factor,                 \
+                               float max_load_factor, unsigned int seed, const alloc_api *api)                    \
     {                                                                                                             \
         memset(ht, 0, sizeof(htable_##name));                                                                     \
                                                                                                                   \
@@ -116,7 +122,8 @@ DEFAULT_FUNCS(float, float)
         memset(ht->entries, 0, sizeof(htable_entry_##name) * initial_capacity);                                   \
     }                                                                                                             \
                                                                                                                   \
-    static bool ht_find_entry_##name(const htable_##name *ht, const tkey key_to_find, size_t *out_entry_index)    \
+    static inline bool ht_find_entry_##name(const htable_##name *ht, const tkey key_to_find,                      \
+                                            size_t *out_entry_index)                                              \
     {                                                                                                             \
         unsigned int hash = ht->funcs.key_hash_func(key_to_find, ht->seed);                                       \
         unsigned int index = hash & (ht->capacity - 1);                                                           \
@@ -144,13 +151,13 @@ DEFAULT_FUNCS(float, float)
         return found;                                                                                             \
     }                                                                                                             \
                                                                                                                   \
-    static float ht_load_factor_##name(const htable_##name *ht)                                                   \
+    static inline float ht_load_factor_##name(const htable_##name *ht)                                            \
     {                                                                                                             \
         float lf = (float)ht->count / (float)ht->capacity;                                                        \
         return lf;                                                                                                \
     }                                                                                                             \
                                                                                                                   \
-    void ht_add_##name(htable_##name *ht, const tkey key, tval value)                                             \
+    inline void ht_add_##name(htable_##name *ht, const tkey key, tval value)                                      \
     {                                                                                                             \
         if (HTABLE_LOAD_FACTOR_CHECK(ht) > ht->max_load_factor)                                                   \
         {                                                                                                         \
@@ -199,7 +206,7 @@ DEFAULT_FUNCS(float, float)
         entry->value = ht->funcs.value_copy_func(value, ht->api);                                                 \
     }                                                                                                             \
                                                                                                                   \
-    bool ht_get_##name(const htable_##name *ht, const tkey key_to_search, tval *out_value_ptr)                    \
+    inline bool ht_get_##name(const htable_##name *ht, const tkey key_to_search, tval *out_value_ptr)             \
     {                                                                                                             \
         size_t index = 0;                                                                                         \
         bool found = ht_find_entry_##name(ht, key_to_search, &index);                                             \
@@ -211,9 +218,12 @@ DEFAULT_FUNCS(float, float)
         return found;                                                                                             \
     }                                                                                                             \
                                                                                                                   \
-    bool ht_key_exists_##name(const htable_##name *ht, const tkey key) { return ht_get_##name(ht, key, NULL); }   \
+    inline bool ht_key_exists_##name(const htable_##name *ht, const tkey key)                                     \
+    {                                                                                                             \
+        return ht_get_##name(ht, key, NULL);                                                                      \
+    }                                                                                                             \
                                                                                                                   \
-    void ht_add_rehash_##name(htable_##name *ht, const htable_key_##name *key, tval value)                        \
+    inline void ht_add_rehash_##name(htable_##name *ht, const htable_key_##name *key, tval value)                 \
     {                                                                                                             \
         unsigned int index = key->hash & (ht->capacity - 1);                                                      \
         htable_entry_##name *entry = ht->entries + index;                                                         \
@@ -231,7 +241,7 @@ DEFAULT_FUNCS(float, float)
         ++ht->count;                                                                                              \
     }                                                                                                             \
                                                                                                                   \
-    void ht_resize_##name(htable_##name *ht, size_t new_capacity)                                                 \
+    inline void ht_resize_##name(htable_##name *ht, size_t new_capacity)                                          \
     {                                                                                                             \
         htable_entry_##name *old_entries = ht->entries;                                                           \
         size_t old_count = ht->count;                                                                             \
@@ -256,7 +266,7 @@ DEFAULT_FUNCS(float, float)
         }                                                                                                         \
     }                                                                                                             \
                                                                                                                   \
-    bool ht_remove_key_##name(htable_##name *ht, const tkey key_to_remove)                                        \
+    inline bool ht_remove_key_##name(htable_##name *ht, const tkey key_to_remove)                                 \
     {                                                                                                             \
         size_t index = 0xffffffffffffffffULL;                                                                     \
         bool found = ht_find_entry_##name(ht, key_to_remove, &index);                                             \
@@ -281,7 +291,7 @@ DEFAULT_FUNCS(float, float)
         return found;                                                                                             \
     }                                                                                                             \
                                                                                                                   \
-    void ht_display_##name(const htable_##name *ht)                                                               \
+    inline void ht_display_##name(const htable_##name *ht)                                                        \
     {                                                                                                             \
         printf("Hash Table:\n");                                                                                  \
         for (size_t i = 0; i < ht->capacity; ++i)                                                                 \
@@ -300,7 +310,7 @@ DEFAULT_FUNCS(float, float)
         }                                                                                                         \
     }                                                                                                             \
                                                                                                                   \
-    void ht_clear_##name(htable_##name *ht)                                                                       \
+    inline void ht_clear_##name(htable_##name *ht)                                                                \
     {                                                                                                             \
         for (size_t i = 0; i < ht->capacity; ++i)                                                                 \
         {                                                                                                         \
@@ -315,7 +325,7 @@ DEFAULT_FUNCS(float, float)
         ht->count = 0;                                                                                            \
     }                                                                                                             \
                                                                                                                   \
-    void ht_delete_##name(htable_##name *ht)                                                                      \
+    inline void ht_delete_##name(htable_##name *ht)                                                               \
     {                                                                                                             \
         ht_clear_##name(ht);                                                                                      \
         shfree(ht->api, ht->entries);                                                                             \
@@ -325,7 +335,7 @@ DEFAULT_FUNCS(float, float)
 #define HTABLE_API_IMPL_PTR(TKey, TVal, name) HTABLE_API_IMPL(TKey*, TVal*, TKey, TVal, name)
 
 #include <stdio.h>
-unsigned int
+inline unsigned int
 uintptr_hash(const uintptr_t n, unsigned int seed)
 {
     unsigned int result = seed;
@@ -334,8 +344,6 @@ uintptr_hash(const uintptr_t n, unsigned int seed)
     return result;
 }
 
-DEFAULT_FUNCS(uintptr_t, uintptr)
-HTABLE_API(uintptr_t, uintptr_t, ptr_ptr);
 HTABLE_API_IMPL(uintptr_t, uintptr_t, uintptr, uintptr, ptr_ptr)
 
 #ifdef HASHTABLE_UNIT_TESTS
