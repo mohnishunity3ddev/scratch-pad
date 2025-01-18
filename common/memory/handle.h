@@ -42,9 +42,9 @@ public:
     /* The handled object should have constructor for passed in Args(one which does not have alloc_api as the first
     argument) or should have constructor which accepts alloc_api as the first arg and then the Args passed in
     here. */
-#ifdef ALLOCATOR_DEBUG
     template <typename... Args, typename = typename std::enable_if<has_normal_constructor<Args...>::value ||
                                                                    has_alloc_constructor<Args...>::value>::type>
+#ifdef ALLOCATOR_DEBUG
     explicit Handle(const alloc_api *api, const char *label, Args &&...args) noexcept
         : allocApi(api)
     {
@@ -57,8 +57,6 @@ public:
         construct_impl(std::forward<Args>(args)...);
     }
 #else
-    template <typename... Args, typename = typename std::enable_if<has_normal_constructor<Args...>::value ||
-                                                                   has_alloc_constructor<Args...>::value>::type>
     explicit Handle(const alloc_api *api, Args &&...args) noexcept
         : allocApi(api)
     {
@@ -350,7 +348,7 @@ handle_unit_tests(void *memory, size_t memory_size)
     for (int i = 0; i < 8; ++i) {
         assert(arrHandle->arrOwner[i] == (i + 1) * 10);
     }
-    
+
     arrHandle.free();
     testHandle.free();
 

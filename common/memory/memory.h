@@ -105,7 +105,7 @@ align_forward(uintptr_t ptr, size_t align)
     return p;
 }
 
-size_t
+inline size_t
 calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
 {
     uintptr_t p, a, modulo, padding, needed_space;
@@ -146,6 +146,8 @@ shumemcpy(void *destination, const void *src, size_t size)
 {
     unsigned char *d = (unsigned char *)destination;
     const unsigned char *s = (const unsigned char *)src;
+
+    // TODO: check if src and dst are aligned to apt boundary and use aligned SIMD instructions. Unaligned loadu and storeu instructions are slower.
 
 #ifdef HAS_AVX512F
     while (size >= 64) {

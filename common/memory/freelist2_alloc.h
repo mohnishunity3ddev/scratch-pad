@@ -12,7 +12,7 @@
 #endif
 #include <containers/htable.h>
 
-// #define ALLOCATOR_DEBUG
+#define ALLOCATOR_DEBUG
 
 typedef struct Freelist2_Allocation_Header {
     /// @brief this includes required size, size for header and size for alignment padding.

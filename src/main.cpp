@@ -29,10 +29,10 @@
 #endif
 #include <containers/htable.h>
 
-// #define FREELIST_ALLOCATOR_UNIT_TESTS
+#define FREELIST_ALLOCATOR_UNIT_TESTS
 #define FREELIST_ALLOCATOR_IMPLEMENTATION
 #include <memory/freelist_alloc.h>
-// #define FREELIST2_ALLOCATOR_UNIT_TESTS
+#define FREELIST2_ALLOCATOR_UNIT_TESTS
 #define FREELIST2_ALLOCATOR_IMPLEMENTATION
 #include <memory/freelist2_alloc.h>
 
@@ -54,18 +54,17 @@ main()
 #ifdef _DEBUG
     handle_unit_tests(memory, memSize);
 #endif
-
-/*
+    free(memory);
+    
     Clock clock = Clock();
     clock.begin("Start of main");
-    int numtests = 1000;
+    int numtests = 10;
     for (int i = 0; i < numtests; ++i) {
         freelist_unit_tests();
         freelist2_unit_tests();
     }
     clock.end();
- */
 
-    free(memory);
+
     return 0;
 }
