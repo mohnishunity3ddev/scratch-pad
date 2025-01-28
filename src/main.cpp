@@ -55,7 +55,8 @@ main()
     handle_unit_tests(memory, memSize);
 #endif
     free(memory);
-    
+
+#if 1
     Clock clock = Clock();
     clock.begin("Start of main");
     int numtests = 10;
@@ -64,7 +65,7 @@ main()
         freelist2_unit_tests();
     }
     clock.end();
-
+#endif
 
     return 0;
 }

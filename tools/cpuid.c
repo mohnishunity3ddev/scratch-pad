@@ -1,117 +1,111 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#if defined(_MSC_VER)
-#include <intrin.h> // For __cpuidex and _xgetbv on MSVC
-#else
-#include <cpuid.h>  // For __cpuid_count on GCC/Clang
-#endif
+#include <cpuid.h>
 
-// Helper function to execute CPUID
+
 void cpuid(int info[4], int eax, int ecx) {
-#if defined(_MSC_VER)
-    __cpuidex(info, eax, ecx);
-#else
     __cpuid_count(eax, ecx, info[0], info[1], info[2], info[3]);
-#endif
 }
 
-// Function to check if XSAVE is supported (needed for AVX and beyond)
+
 bool supports_xsave() {
     int info[4];
     cpuid(info, 1, 0);
-    return (info[2] & (1 << 27)) != 0; // Bit 27 of ECX
+    return (info[2] & (1 << 27)) != 0;
 }
 
-// Function to check if the OS has enabled AVX support via XGETBV
+
 bool supports_os_avx() {
     if (!supports_xsave()) return false;
 
     unsigned int eax, edx;
-#if defined(_MSC_VER)
-    eax = (unsigned int)_xgetbv(0);
-    edx = 0;
-#else
     __asm__ volatile(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(0));
-#endif
-    return (eax & 0x6) == 0x6; // Check if XMM and YMM state are enabled
+    return (eax & 0x6) == 0x6;
 }
 
-// Function to check SSE (SSE1)
+bool
+supports_os_avx__2()
+{
+    unsigned long long xcr0;
+    __asm__("xgetbv" : "=A"(xcr0) : "c"(0) : "%edx");
+    return (xcr0 & 6) == 6;
+}
+
+
 bool check_sse() {
     int info[4];
     cpuid(info, 1, 0);
-    return (info[3] & (1 << 25)) != 0; // Bit 25 of EDX
+    return (info[3] & (1 << 25)) != 0;
 }
 
-// Check SSE2
+
 bool check_sse2() {
     int info[4];
     cpuid(info, 1, 0);
-    return (info[3] & (1 << 26)) != 0; // Bit 26 of EDX
+    return (info[3] & (1 << 26)) != 0;
 }
 
-// Check SSE3
+
 bool check_sse3() {
     int info[4];
     cpuid(info, 1, 0);
-    return (info[2] & (1 << 0)) != 0; // Bit 0 of ECX
+    return (info[2] & (1 << 0)) != 0;
 }
 
-// Check SSE4.1
+
 bool check_sse41() {
     int info[4];
     cpuid(info, 1, 0);
-    return (info[2] & (1 << 19)) != 0; // Bit 19 of ECX
+    return (info[2] & (1 << 19)) != 0;
 }
 
-// Check SSE4.2
+
 bool check_sse42() {
     int info[4];
     cpuid(info, 1, 0);
-    return (info[2] & (1 << 20)) != 0; // Bit 20 of ECX
+    return (info[2] & (1 << 20)) != 0;
 }
 
-// Check AVX
+
 bool check_avx() {
     int info[4];
     cpuid(info, 1, 0);
-    return supports_os_avx() && (info[2] & (1 << 28)) != 0; // Bit 28 of ECX
+    return supports_os_avx() && (info[2] & (1 << 28)) != 0;
 }
 
-// Check AVX2
+
 bool check_avx2() {
     int info[4];
-    cpuid(info, 7, 0); // Leaf 7, sub-leaf 0
-    return supports_os_avx() && (info[1] & (1 << 5)) != 0; // Bit 5 of EBX
+    cpuid(info, 7, 0);
+    return supports_os_avx__2() && (info[1] & (1 << 5)) != 0;
 }
 
-// Check AVX-512F (Foundation)
+
 bool check_avx512f() {
     int info[4];
-    cpuid(info, 7, 0); // Leaf 7, sub-leaf 0
-    return supports_os_avx() && (info[1] & (1 << 16)) != 0; // Bit 16 of EBX
+    cpuid(info, 7, 0);
+    return supports_os_avx() && (info[1] & (1 << 16)) != 0;
 }
 
-// Check AVX-512DQ (Doubleword and Quadword)
 bool check_avx512dq() {
     int info[4];
-    cpuid(info, 7, 0); // Leaf 7, sub-leaf 0
-    return supports_os_avx() && (info[1] & (1 << 17)) != 0; // Bit 17 of EBX
+    cpuid(info, 7, 0);
+    return supports_os_avx() && (info[1] & (1 << 17)) != 0;
 }
 
-// Check AVX-512BW (Byte and Word)
+
 bool check_avx512bw() {
     int info[4];
-    cpuid(info, 7, 0); // Leaf 7, sub-leaf 0
-    return supports_os_avx() && (info[1] & (1 << 30)) != 0; // Bit 30 of EBX
+    cpuid(info, 7, 0);
+    return supports_os_avx() && (info[1] & (1 << 30)) != 0;
 }
 
-// Check AVX-512VL (Vector Length Extensions)
+
 bool check_avx512vl() {
     int info[4];
-    cpuid(info, 7, 0); // Leaf 7, sub-leaf 0
-    return supports_os_avx() && (info[1] & (1 << 31)) != 0; // Bit 31 of EBX
+    cpuid(info, 7, 0);
+    return supports_os_avx() && (info[1] & (1 << 31)) != 0;
 }
 
 bool strcmpb(const void *dst, const void *src, size_t len) {
@@ -127,10 +121,11 @@ bool strcmpb(const void *dst, const void *src, size_t len) {
     return true;
 }
 
-// Main function to test all features
+
 int
 main(int argc, char **argv)
 {
+#ifdef __clang__
     char *arg = argv[1];
     size_t len = strlen(arg);
     printf("%s\n", arg);
@@ -157,6 +152,9 @@ main(int argc, char **argv)
     } else if (len == strlen("avx512vl") && strcmpb(arg, "avx512vl", strlen(arg))) {
         return !check_avx512vl();
     }
+#else
+#error "only for clang"
+#endif
 
     return 1;
 }

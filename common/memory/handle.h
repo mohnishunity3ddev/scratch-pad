@@ -9,7 +9,7 @@
 #include <typeinfo>
 
 #ifdef ALLOCATOR_DEBUG
-#include <concepts>
+// #include <concepts>
 #include <type_traits>
 #ifndef STRING32_IMPLEMENTATION
 #define STRING32_IMPLEMENTATION
@@ -271,7 +271,7 @@ handle_unit_tests(void *memory, size_t memory_size)
     Freelist2 fl;
     freelist2_init(&fl, memory, memory_size, DEFAULT_ALIGNMENT);
 
-    int numHandles = 24;
+    constexpr int numHandles = 24;
     Handle<int> originalHandles[numHandles];
     for (int i = 0; i < 24; ++i) {
 #ifdef ALLOCATOR_DEBUG
@@ -362,7 +362,7 @@ handle_unit_tests(void *memory, size_t memory_size)
         assert(t.b == ('a'+i));
         assert(t.c == (1000+i));
     }
-
+    
     testArrayHandle.free();
 
     /*

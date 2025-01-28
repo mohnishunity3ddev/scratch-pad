@@ -9,8 +9,13 @@ set(EXTERN_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external)
 
 # Include the module to check compiler flags
 include(CheckCCompilerFlag)
+if(WIN32)
+    set(CPUID_TOOL "${CMAKE_CURRENT_SOURCE_DIR}/tools/cpuid_msvc.exe")
+else()
+    set(CPUID_TOOL "${CMAKE_CURRENT_SOURCE_DIR}/tools/cpuid.exe")
+endif()
+
 # Path to the cpuid tool
-set(CPUID_TOOL "${CMAKE_CURRENT_SOURCE_DIR}/tools/cpuid.exe")
 if (NOT EXISTS ${CPUID_TOOL})
     message(FATAL_ERROR "cpuid tool is not present!")
 endif()
@@ -24,19 +29,48 @@ function(check_and_define flag define_name message_text)
         RESULT_VARIABLE CPUID_RESULT
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+
     if (CPUID_RESULT EQUAL 0)
-        # check for compiler support
-        check_c_compiler_flag("${flag}" HAS_FLAG)
-        if (HAS_FLAG)
-            # define for the detected instructtion sets.
-            add_compile_options("${flag}")
+        if (MSVC)
+            # Map GCC/Clang flags to MSVC equivalents
+            if ("${flag}" STREQUAL "-msse")
+                set(flag "/arch:SSE")
+            elseif ("${flag}" STREQUAL "-msse2")
+                set(flag "/arch:SSE2")
+            elseif ("${flag}" STREQUAL "-msse3")
+                set(flag "/arch:SSE2")
+            elseif ("${flag}" STREQUAL "-msse4.1")
+                set(flag "/arch:SSE2")
+            elseif ("${flag}" STREQUAL "-msse4.2")
+                set(flag "/arch:SSE2")
+            elseif ("${flag}" STREQUAL "-mavx")
+                set(flag "/arch:AVX")
+            elseif ("${flag}" STREQUAL "-mavx2")
+                set(flag "/arch:AVX2")
+            endif()
+            # there are no specific MSVC cl flags for avx512 variants apparently. just use intrinsics.
+            if(NOT flag STREQUAL "-mavx512f" AND
+               NOT flag STREQUAL "-mavx512dq" AND
+               NOT flag STREQUAL "-mavx512bw" AND
+               NOT flag STREQUAL "-mavx512vl")
+                add_compile_options("${flag}")
+            endif()
             add_definitions("-D${define_name}")
-            message(STATUS "${message_text} detected.")
+            message(STATUS "[CPUID]: ${message_text} detected.")
         else()
-            message(STATUS "${message_text} not supported.")
+            # check for compiler support
+            check_c_compiler_flag("${flag}" HAS_FLAG)
+            if (HAS_FLAG)
+                # define for the detected instructtion sets.
+                add_compile_options("${flag}")
+                add_definitions("-D${define_name}")
+                message(STATUS "[CPUID]: ${message_text} detected.")
+            else()
+                message(STATUS "[CPUID]: ${message_text}'s compiler flag ${flag} not supported by compiler.")
+            endif()
         endif()
     else()
-        message(STATUS "${message_text} not supported.")
+        message(STATUS "[CPUID]: ${message_text} not supported.")
     endif()
 endfunction()
 
@@ -62,66 +96,14 @@ if(WIN32)
     add_definitions(-DWIN32_LEAN_AND_MEAN)
     add_definitions(-DNOMINMAX)
 endif()
-option(USE_DEBUG "Enter debug mode" OFF)
-if (USE_DEBUG)
-  add_definitions(-DDEBUG)
-endif()
 
-###### Find OpenGL
-# find_package(OpenGL REQUIRED)
-
-###### GLFW Stuff
-# set(GLFW_BUILD_EXAMPLES     OFF CACHE BOOL "")
-# set(GLFW_BUILD_TESTS        OFF CACHE BOOL "")
-# set(GLFW_BUILD_DOCS         OFF CACHE BOOL "")
-# set(GLFW_INSTALL            OFF CACHE BOOL "")
-# add_subdirectory(external/glfw)
-
-###### Assimp Stuff
-# set(ASSIMP_NO_EXPORT            ON CACHE BOOL "")
-# set(ASSIMP_BUILD_DRACO          OFF CACHE BOOL "")
-# set(ASSIMP_BUILD_ASSIMP_TOOLS   OFF CACHE BOOL "")
-# set(ASSIMP_BUILD_TESTS          OFF CACHE BOOL "")
-# set(ASSIMP_INSTALL_PDB          OFF CACHE BOOL "")
-# set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "")
-# set(ASSIMP_BUILD_OBJ_IMPORTER   ON CACHE BOOL "")
-# set(ASSIMP_BUILD_GLTF_IMPORTER  ON CACHE BOOL "")
-# if(WIN32)
-#     set(ASSIMP_BUILD_ZLIB       ON CACHE BOOL "")
-# endif()
-# add_subdirectory(external/assimp)
-
-# if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-#     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-attributes -Wno-defaulted-function-deleted -Wno-braced-scalar-init -Wno-writable-strings -Wno-format -Wno-deprecated-declarations -Wno-macro-redefined")
-# endif ()
-
-###### GLAD Stuff
-# set(GLAD_SOURCES external/glad/src/glad.c)
-# add_library(glad ${GLAD_SOURCES})
-
-###### Include Directories ...
-# include_directories(external/glfw/include)
-# include_directories(external/glm)
-# include_directories(external/glad/include)
-# include_directories(external/stb)
-# include_directories(external/assimp/include)
-# include_directories($<TARGET_FILE_DIR:assimp>/../include) # there is one config.h file which gets build in assimp's build directory by cmake.
-# include_directories(external/imgui)
 include_directories(common)
-
-# if(WIN32)
-#     set_property(TARGET zlibstatic    PROPERTY FOLDER "ThirdPartyLibraries")
-# endif()
-# set_property(TARGET glfw            PROPERTY FOLDER "ThirdPartyLibraries")
-# set_property(TARGET glad            PROPERTY FOLDER "ThirdPartyLibraries")
-# set_property(TARGET assimp          PROPERTY FOLDER "ThirdPartyLibraries")
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
     COMMAND ${CMAKE_CXX_COMPILER} /EP ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp > ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 )
-
 
 # Include Common SharedUtils
 add_subdirectory(common)

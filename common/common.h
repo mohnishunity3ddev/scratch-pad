@@ -4,7 +4,6 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -15,11 +14,19 @@
 #undef SINT32_MAX
 #endif
 
-#ifdef __cplusplus
+/*
+#if defined(_MSC_VER)
+#define restrict __restrict
+#elif defined(__GNUC__) || defined(__clang__)
 #define restrict __restrict__
+#else
+#define restrict
 #endif
+*/
 
 #define SINT32_MAX 2147483647
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define GET_FORMAT_STR(x) _Generic((x), \
     char: "%c", \
     signed char: "%hhd", \
@@ -40,9 +47,13 @@
     const char*: "%s", \
     const void*: "%p", \
     default: "%p")
-
 #define print_type(x)                                                                                             \
     _Generic((x), int: "int", float: "float", double: "double", char *: "string", default: "unknown")
+
+#else
+#define GET_FORMAT_STR(x)
+#define print_type(x)
+#endif
 
 #define TEST_ASSERT(condition, message)                                                                           \
     do                                                                                                            \

@@ -5,6 +5,14 @@
 #include "common.h"
 #include <stdio.h>
 
+#if defined(_MSC_VER)
+#define restrict __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+#define restrict __restrict__
+#else
+#define restrict
+#endif
+
 static alloc_api *alloc_api_global = {NULL};
 
 typedef struct string32 {

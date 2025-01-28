@@ -12,7 +12,9 @@
 #endif
 #include <containers/htable.h>
 
+#ifdef _DEBUG
 #define ALLOCATOR_DEBUG
+#endif
 
 typedef struct Freelist2_Allocation_Header {
     /// @brief this includes required size, size for header and size for alignment padding.
@@ -382,7 +384,8 @@ freelist2_free(void *fl, void *ptr)
     free_node->block_size = header->block_size;
     free_node->next = NULL;
 
-    assert(htdel(ptr_ptr, &freelist->table, (uintptr_t)free_node));
+    bool ht_removed = htdel(ptr_ptr, &freelist->table, (uintptr_t)free_node);
+    assert(ht_removed);
     assert(freelist->used >= free_node->block_size);
     freelist->used -= free_node->block_size;
     if (freelist->head != NULL) {
@@ -691,7 +694,7 @@ freelist2_defragment(Freelist2 *fl)
         allocation_header->block_size = new_total_size;
         allocation_header->alignment_padding = new_padding_size;
 
-        // telling my daddy to point to my new address now, AND daddy's allocation header to my header.
+        /* telling my daddy to point to my new address now, AND daddy's allocation header to my header. */
         *allocation_header->pOwner = (void *)new_aligned_address;
         if ((uintptr_t)allocation_header->pOwner > (uintptr_t)fl->data &&
             (uintptr_t)allocation_header->pOwner < ((uintptr_t)fl->data + fl->size))
@@ -700,8 +703,11 @@ freelist2_defragment(Freelist2 *fl)
             parent_header->child_header = (Freelist2_Allocation_Header *)new_header_position;
         }
         assert((uintptr_t)new_aligned_address >= ((uintptr_t)fl->data + sizeof(Freelist2_Allocation_Header)));
-        // telling the child allocation(if any), that I, your daddy, moved, so that when he moves, he can tell me,
-        // his daddy(the correct one), his new address after memmove.
+        /*
+            telling the child allocation(if any), that I, your daddy, moved, so that when he moves, he can tell me,
+            his daddy(the correct one), his new address after memmove. to be honest, I never thought I would write
+            this sentence ever in my life.
+        */
         if (allocation_header->child_header) {
             allocation_header->child_header->pOwner = (void **)new_aligned_address;
         }

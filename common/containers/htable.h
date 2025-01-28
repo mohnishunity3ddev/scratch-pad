@@ -10,11 +10,24 @@
 #include <stdint.h>
 
 #define HTABLE_LOAD_FACTOR_CHECK(ht) (float)((ht)->count + 1) / (float)((ht)->capacity)
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define DEFAULT_FUNCS(T, name)                                                                                    \
-    inline bool name##_compare(T a, T b) { return a == b; }                                                              \
-    inline T name##_dup(const T k, const alloc_api *api) { return k; }                                                   \
-    inline void name##_free(T k, const alloc_api *api) {}                                                                \
-    inline void name##_to_string(T x, char *buffer, size_t max_len) { snprintf(buffer, max_len, GET_FORMAT_STR(x), x); }
+    inline bool name##_compare(T a, T b) { return a == b; }                                                       \
+    inline T name##_dup(const T k, const alloc_api *api) { return k; }                                            \
+    inline void name##_free(T k, const alloc_api *api) {}                                                         \
+    inline void name##_to_string(T x, char *buffer, size_t max_len)                                               \
+    {                                                                                                             \
+        snprintf(buffer, max_len, GET_FORMAT_STR(x), x);                                                          \
+    }
+#else
+#define DEFAULT_FUNCS(T, name)                                                                                    \
+    inline bool name##_compare(T a, T b) { return a == b; }                                                       \
+    inline T name##_dup(const T k, const alloc_api *api) { return k; }                                            \
+    inline void name##_free(T k, const alloc_api *api) {}                                                         \
+    inline void name##_to_string(T x, char *buffer, size_t max_len) {}
+
+#endif
 DEFAULT_FUNCS(float, float)
 
 #define HTABLE_API(tkey, tval, name)                                                                              \

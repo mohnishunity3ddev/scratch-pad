@@ -15,17 +15,11 @@ macro(SET_OUTPUT_NAMES projname)
 set_target_properties(${projname} PROPERTIES OUTPUT_NAME_DEBUG ${projname}_Debug)
 set_target_properties(${projname} PROPERTIES OUTPUT_NAME_RELEASE ${projname}_Release)
 set_target_properties(${projname} PROPERTIES OUTPUT_NAME_RELWITHDEBINFO ${projname}_ReleaseDebInfo)
-
-# On Linux/macOS the binaries go to <root>/bin folder
-if (UNIX)
-	set_target_properties(${projname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
-endif()
 endmacro()
 
 macro(SETUP_APP projname chapter)
 	set(FOLDER_NAME ${chapter})
 	set(PROJECT_NAME ${projname})
-	# project(${PROJECT_NAME} CXX)
 
 	file(GLOB_RECURSE SRC_FILES 	LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.c *.cpp)
 	file(GLOB_RECURSE HEADER_FILES 	LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.h *.hpp)
@@ -39,19 +33,21 @@ macro(SETUP_APP projname chapter)
 
 	SET_OUTPUT_NAMES(${PROJECT_NAME})
 
-	# if(NOT MSVC)
-	# 	set_property(TARGET ${PROJECT_NAME} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-	# endif()
+    # Avoid putting the exe inside Debug/Release folder.
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/src
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/bin/src
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin/src
+        RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_SOURCE_DIR}/bin/src
+        RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_SOURCE_DIR}/bin/src
+    )
 
 	set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER ${FOLDER_NAME})
 
-	# set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
-	# set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
-
+    ## setting cwd
 	# if(MSVC)
 	# 	set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 	# endif()
-
 endmacro()
 
 macro(subdirlist result curdir)

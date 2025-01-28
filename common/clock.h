@@ -4,6 +4,7 @@
 #include "common.h"
 #include "memory/memory.h"
 #include <stdio.h>
+#include <windows.h>
 
 struct Clock
 {
