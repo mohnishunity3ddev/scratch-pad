@@ -233,7 +233,7 @@ int main(int argc, char **argv)
         return !InstructionSet::AVX();
     } else if (len == strlen("avx2") && strcmpb(arg, "avx2", strlen(arg))) {
         return !InstructionSet::AVX2();
-    } else if (len == strlen("avx512") && strcmpb(arg, "avx512", strlen(arg))) {
+    } else if (len == strlen("avx512f") && strcmpb(arg, "avx512f", strlen(arg))) {
         return !InstructionSet::AVX512F();
     }
     return 1;
