@@ -8,6 +8,10 @@
 #endif
 #include <cstring>
 
+#ifdef _LIBCPP_CXX03_LANG
+#include <common.h>
+#endif
+
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
 #ifdef __APPLE__

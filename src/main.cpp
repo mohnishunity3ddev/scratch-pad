@@ -43,6 +43,7 @@
 #include "clock.h"
 
 #include <utility>
+#include <math/vec.h>
 
 int
 main()
@@ -54,6 +55,8 @@ main()
     handle_unit_tests(memory, memSize);
 #endif
     free(memory);
+
+    driver();
 
 #if 1
     Clock clock = Clock();

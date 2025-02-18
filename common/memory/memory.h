@@ -8,12 +8,12 @@
 #include <immintrin.h>
 #endif
 
-#include <assert.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
+#include <climits>
+#include <cstdbool>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 
 #ifndef DEFAULT_ALIGNMENT

@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Variables
-PROJECT_NAME="cpp_concurrency_in_action"
+PROJECT_NAME="scratch_pad"
 
 BUILD_SCRIPTS_DIR_PATH="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT_PATH_RELATIVE_FROM_SCRIPT="../../"
