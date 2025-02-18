@@ -27,13 +27,13 @@ CompileFlags:
     - -Wno-macro-redefined
     - -Wno-declaration-after-statement
     - -Wno-newline-eof
-    - -mavx2
-    - -mavx
-    - -msse
-    - -msse2
-    - -msse3
-    - -msse4.1
-    - -msse4.2
+    # - -mavx2
+    # - -mavx
+    # - -msse
+    # - -msse2
+    # - -msse3
+    # - -msse4.1
+    # - -msse4.2
     - -DSTRING32_UNIT_TESTS
     - -DMUTABLE_STRINGS
     # Uncomment if you want more warnings:

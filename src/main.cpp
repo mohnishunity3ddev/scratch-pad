@@ -12,7 +12,6 @@
 // #define POOL_ALLOCATOR_UNIT_TEST
 // #include <memory/pool_alloc.h>
 #include "common.h"
-#include <corecrt_malloc.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

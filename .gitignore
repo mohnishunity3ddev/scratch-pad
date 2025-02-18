@@ -1,3 +1,4 @@
 bin/*
 scratch_pad_remedy.rdbg
 .cache/*
+compile_commands.json

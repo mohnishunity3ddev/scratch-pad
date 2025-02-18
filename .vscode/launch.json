@@ -2,6 +2,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "(MacOS) LLDB Launch",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/bin/src/scratch_pad_Debug",
+            "args": [],
+            "cwd": "${fileDirname}",
+        },
+        {
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",

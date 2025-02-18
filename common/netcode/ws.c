@@ -1,6 +1,7 @@
 #include "ws.h"
 #include <stdio.h>
 
+#ifdef WIN32
 int
 ws_startup()
 {
@@ -16,9 +17,9 @@ ws_startup()
         printf("WSAStartup failed!: %d.\n", result);
         return 1;
     }
-    
+
     WSACleanup();
 
     return 0;
 }
-
+#endif

@@ -1,12 +1,12 @@
 #ifndef HANDLE_H
 #define HANDLE_H
 
-#include "memory.h"
 #include "memory/memory.h"
 
 #include <utility>
 #include <memory/freelist2_alloc.h>
 #include <typeinfo>
+#include <new>
 
 #ifdef ALLOCATOR_DEBUG
 // #include <concepts>
@@ -362,7 +362,7 @@ handle_unit_tests(void *memory, size_t memory_size)
         assert(t.b == ('a'+i));
         assert(t.c == (1000+i));
     }
-    
+
     testArrayHandle.free();
 
     /*

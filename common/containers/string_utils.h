@@ -1,8 +1,8 @@
 #ifndef STRING_UTILS_H
 #define STRING_UTILS_H
 
-#include "memory/memory.h"
 #include "common.h"
+#include <memory/memory.h>
 #include <stdio.h>
 
 #if defined(_MSC_VER)

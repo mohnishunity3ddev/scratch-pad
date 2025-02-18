@@ -1,13 +1,26 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifdef WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <stdint.h>
-#include <string.h>
+#endif
+#include <cstring>
 
 #define max(a,b) (((a) > (b)) ? (a) : (b))
+
+#ifdef __APPLE__
+inline size_t strnlen_s(const char *str, size_t maxLen) { return (str) ? strnlen(str, maxLen) : 0; }
+inline size_t strcpy_s(char *dst, size_t dst_size, const char *src) { return strlcpy(dst, src, dst_size); }
+inline void
+memcpy_s(void *dst, size_t dst_size, const void *src, size_t src_size)
+{
+    if (!dst || !src) { return; }
+    if (src_size > dst_size) { /* out-of-bounds avoided for destination */ return; }
+    memcpy(dst, src, src_size);
+}
+#endif
 
 #ifdef SINT32_MAX
 #error "This should not be defined"

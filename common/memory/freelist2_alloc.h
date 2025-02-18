@@ -3,9 +3,7 @@
 
 #include "containers/string_utils.h"
 #include "memory.h"
-#include <stdint.h>
-#include <vadefs.h>
-#include <vcruntime_string.h>
+#include <cstdint>
 
 #ifndef HASHTABLE_IMPLEMENTATION
 #define HASHTABLE_IMPLEMENTATION

@@ -91,6 +91,9 @@ check_and_define("-mavx512f" HAS_AVX512F    "avx512f")
 # set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set(CMAKE_CXX_EXTENSIONS ON)
 
+# for clangd
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Definitions
 if(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
