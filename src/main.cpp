@@ -44,6 +44,7 @@
 
 #include <utility>
 #include <math/vec.h>
+#include <math/mat.h>
 
 int
 main()
@@ -56,7 +57,8 @@ main()
 #endif
     free(memory);
 
-    driver();
+    // driver();
+    mat4driver();
 
 #if 1
     Clock clock = Clock();

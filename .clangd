@@ -15,7 +15,14 @@ CompileFlags:
 
     # macos specific 
     - -D_LIBCPP_STD_VER=17   # Tell libc++ to use C++17
-    
+
+    # ignore warnings
+    - -Wno-macro-redefined
+    - -Wno-declaration-after-statement
+    - -Wno-newline-eof
+    - -Wno-invalid_decl_spec_combination
+
+    # custom defines    
     - -DFREELIST2_ALLOCATOR_IMPLEMENTATION
     - -DFREELIST_ALLOCATOR_IMPLEMENTATION
     - -DFREELIST_ALLOCATOR_UNIT_TESTS
@@ -28,10 +35,10 @@ CompileFlags:
     - -DDARR_IMPLEMENTATION
     - -DAVL_IMPLEMENTATION
     - -DSTB_SPRINTF_IMPLEMENTATION
-    - -Wno-macro-redefined
-    - -Wno-declaration-after-statement
-    - -Wno-newline-eof
-    - -Wno-invalid_decl_spec_combination
+    - -DSTRING32_UNIT_TESTS
+    - -DMUTABLE_STRINGS
+
+    # SIMD-specific 
     # - -DHAS_AVX
     # - -DHAS_AVX2
     # - -DHAS_SSE2
@@ -45,8 +52,7 @@ CompileFlags:
     # - -msse3
     # - -msse4.1
     # - -msse4.2
-    - -DSTRING32_UNIT_TESTS
-    - -DMUTABLE_STRINGS
+        
     # Uncomment if you want more warnings:
     # - -Wall
     # - -Wextra
