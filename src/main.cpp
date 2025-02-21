@@ -60,7 +60,7 @@ main()
     // driver();
     // mat4driver();
 
-#if 0
+#if 1
     Clock clock = Clock();
     clock.begin("Start of main");
     int numtests = 10;

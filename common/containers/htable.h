@@ -148,7 +148,9 @@ HTABLE_API(uintptr_t, uintptr_t, ptr_ptr);
             do                                                                                                    \
             {                                                                                                     \
                 tkey key = iter->ht_key.key;                                                                      \
-                if (key != (tkey)0 && key != ht->tombstone && ht->funcs.key_comparator_func(key, key_to_find))    \
+                if (key == (tkey)0)                                                                               \
+                    break;                                                                                        \
+                if (key != ht->tombstone && ht->funcs.key_comparator_func(key, key_to_find))    \
                 {                                                                                                 \
                     found = true;                                                                                 \
                     if (out_entry_index != NULL)                                                                  \
@@ -200,7 +202,7 @@ HTABLE_API(uintptr_t, uintptr_t, ptr_ptr);
                 found = true;                                                                                     \
                 break;                                                                                            \
             }                                                                                                     \
-            index = (index + 1) % (ht->capacity - 1);                                                             \
+            index = (index + 1) & (ht->capacity - 1);                                                             \
             entry = ht->entries + index;                                                                          \
             k = entry->ht_key.key;                                                                                \
         } while (entry != start_entry);                                                                           \
