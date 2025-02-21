@@ -58,9 +58,9 @@ main()
     free(memory);
 
     // driver();
-    mat4driver();
+    // mat4driver();
 
-#if 1
+#if 0
     Clock clock = Clock();
     clock.begin("Start of main");
     int numtests = 10;

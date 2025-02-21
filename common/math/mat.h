@@ -98,7 +98,7 @@ class Mat4Prod : public Mat4Expr<Mat4Prod<E1, E2>> {
     const E1& lhs;
     const E2& rhs;
 
-public:
+  public:
     Mat4Prod(const E1& l, const E2& r) : lhs(l), rhs(r) {}
 
     double operator()(size_t i, size_t j) const {
@@ -122,7 +122,7 @@ class Mat4Add : public Mat4Expr<Mat4Add<E1, E2>> {
     Mat4Add(const E1& l, const E2& r) : lhs(l), rhs(r) {}
 
     double operator()(size_t i, size_t j) const { return lhs(i, j) + rhs(i, j); }
-    
+
     template<typename E>
     Mat4Add<Mat4Add<E1, E2>, E> operator+(const Mat4Expr<E>& rhs) const { return Mat4Add<Mat4Add<E1, E2>, E>(*this, rhs.derived()); }
 };
@@ -144,5 +144,4 @@ void mat4driver()
     Mat4 addResult = add;
     addResult.print();
 }
-
 #endif

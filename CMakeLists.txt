@@ -14,12 +14,10 @@ if(WIN32)
 else()
     set(CPUID_TOOL "${CMAKE_CURRENT_SOURCE_DIR}/tools/cpuid.exe")
 endif()
-
 # Path to the cpuid tool
 if (NOT EXISTS ${CPUID_TOOL})
     message(FATAL_ERROR "cpuid tool is not present!")
 endif()
-
 function(check_and_define flag define_name message_text)
     # check for cpu support.
     execute_process(
@@ -73,7 +71,6 @@ function(check_and_define flag define_name message_text)
         message(STATUS "[CPUID]: ${message_text} not supported.")
     endif()
 endfunction()
-
 # clang-intrin-flag --- custom-define ---  intrin-message-text
 check_and_define("-msse"     HAS_SSE        "sse")
 check_and_define("-msse2"    HAS_SSE2       "sse2")
@@ -103,11 +100,11 @@ endif()
 
 include_directories(common)
 
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
-    COMMAND ${CMAKE_CXX_COMPILER} /EP ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp > ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-)
+# add_custom_command(
+#     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
+#     COMMAND ${CMAKE_CXX_COMPILER} /EP ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp > ${CMAKE_CURRENT_BINARY_DIR}/main_expanded.cpp
+#     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+# )
 
 # Include Common SharedUtils
 add_subdirectory(common)

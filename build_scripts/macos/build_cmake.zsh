@@ -41,10 +41,12 @@ if [[ $is_release -eq 0 ]]; then
         cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
               -DENABLE_TSAN=ON \
               -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_CXX_FLAGS="-D_DEBUG" \
               -S "$PROJECT_ROOT_DIR_PATH" \
               -B "$BIN_DIR_PATH"
     else
         cmake -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_CXX_FLAGS="-D_DEBUG" \
               -S "$PROJECT_ROOT_DIR_PATH" \
               -B "$BIN_DIR_PATH" $code_gen
     fi

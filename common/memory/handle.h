@@ -87,7 +87,7 @@ public:
             allocApi = other.allocApi;
 #ifdef ALLOCATOR_DEBUG
             labelString = other.labelString;
-            memset(other.labelString, 0, sizeof(string32));
+            memset((void *)other.labelString, 0, sizeof(string32));
 #endif
             other.owner = nullptr;
             other.allocApi = nullptr;
