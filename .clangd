@@ -3,7 +3,7 @@
 CompileFlags:
   Add:
       # Common flags for both platforms
-    - -std=c++17
+    - -std=c++23
     - -xc++
     - -D__cplusplus=201703L
 
@@ -14,7 +14,7 @@ CompileFlags:
     # - -fdelayed-template-parsing
 
     # macos specific 
-    - -D_LIBCPP_STD_VER=17   # Tell libc++ to use C++17
+    - -D_LIBCPP_STD_VER=23   # Tell libc++ to use C++17
 
     # ignore warnings
     - -Wno-macro-redefined

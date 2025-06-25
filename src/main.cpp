@@ -11,65 +11,85 @@
 // #define POOL_ALLOCATOR_IMPLEMENTATION
 // #define POOL_ALLOCATOR_UNIT_TEST
 // #include <memory/pool_alloc.h>
-#include "common.h"
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <memory/memory.h>
+// #include "common.h"
+// #include <stddef.h>
+// #include <stdint.h>
+// #include <stdio.h>
+// #include <assert.h>
+// #include <string.h>
+// #include <memory/memory.h>
 
-#include "clock.h"
-#define STRING32_IMPLEMENTATION
-#include <containers/string_utils.h>
+// #include "clock.h"
+// #define STRING32_IMPLEMENTATION
+// #include <containers/string_utils.h>
 
-#ifndef HASTHABLE_IMPLEMENTATION
-#define HASHTABLE_IMPLEMENTATION
-#endif
-#include <containers/htable.h>
+// #ifndef HASTHABLE_IMPLEMENTATION
+// #define HASHTABLE_IMPLEMENTATION
+// #endif
+// #include <containers/htable.h>
 
-#define FREELIST_ALLOCATOR_UNIT_TESTS
-#define FREELIST_ALLOCATOR_IMPLEMENTATION
-#include <memory/freelist_alloc.h>
-#define FREELIST2_ALLOCATOR_UNIT_TESTS
-#define FREELIST2_ALLOCATOR_IMPLEMENTATION
-#include <memory/freelist2_alloc.h>
+// #define FREELIST_ALLOCATOR_UNIT_TESTS
+// #define FREELIST_ALLOCATOR_IMPLEMENTATION
+// #include <memory/freelist_alloc.h>
+// #define FREELIST2_ALLOCATOR_UNIT_TESTS
+// #define FREELIST2_ALLOCATOR_IMPLEMENTATION
+// #include <memory/freelist2_alloc.h>
 
-#include "memory/handle.h"
+// #include "memory/handle.h"
 
-#define RBT_IMPLEMENTATION
-#include <containers/rb_tree.h>
+// #define RBT_IMPLEMENTATION
+// #include <containers/rb_tree.h>
 
-#include "clock.h"
+// #include "clock.h"
 
-#include <utility>
-#include <math/vec.h>
-#include <math/mat.h>
+// #include <utility>
+// #include <math/vec.h>
+// #include <math/mat.h>
+// #include <memory/bitmapped_alloc.h>
+
+#include <cassert>
+#include <cstdint>
+#include <memory/sebi_pool.h>
 
 int
 main()
 {
-    size_t memSize = 1024*1024;
-    void *memory = malloc(memSize);
+//     size_t memSize = 1024*1024;
+//     void *memory = malloc(memSize);
 
-#ifdef _DEBUG
-    handle_unit_tests(memory, memSize);
-#endif
-    free(memory);
+// #ifdef _DEBUG
+//     handle_unit_tests(memory, memSize);
+// #endif
+//     free(memory);
 
-    // driver();
-    // mat4driver();
+//     // driver();
+//     // mat4driver();
 
-#if 1
-    Clock clock = Clock();
-    clock.begin("Start of main");
-    int numtests = 10;
-    for (int i = 0; i < numtests; ++i) {
-        freelist_unit_tests();
-        freelist2_unit_tests();
-    }
-    clock.end();
-#endif
+// #if 1
+//     Clock clock = Clock();
+//     clock.begin("Start of main");
+//     int numtests = 10;
+//     for (int i = 0; i < numtests; ++i) {
+//         freelist_unit_tests();
+//         freelist2_unit_tests();
+//     }
+//     clock.end();
+// #endif
+
+    // driver22();
+
+    struct texture {
+        int a,b;
+    };
+
+    Pool<texture> texturePool;
+    auto h1 = texturePool.allocate();
+    auto *v = texturePool.get(h1);
+    v->a = 1;
+    v->b = 2;
+    texturePool.recycle(h1);
+    v = texturePool.get(h1);
+    assert(v == nullptr);
 
     return 0;
 }

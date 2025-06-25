@@ -88,21 +88,13 @@ is_power_of_2(uintptr_t x)
 inline uintptr_t
 align_forward(uintptr_t ptr, size_t align)
 {
-    uintptr_t p, a, modulo;
     assert(is_power_of_2(align));
 
-    p = ptr;
-    a = (uintptr_t)align;
     // p % a since a is a power of 2.
-    modulo = (p & (a - 1));
+    uintptr_t modulo = (ptr & (align - 1));
 
-    if (modulo != 0)
-    {
-        // p + (a-modulo) is divisible by p
-        p += (a - modulo);
-    }
-
-    return p;
+    // ptr + (align-modulo) is divisible by p
+    return ptr + (align-modulo);
 }
 
 inline size_t
