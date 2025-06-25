@@ -1,19 +1,19 @@
 {
-    "editor.fontFamily": "'sf mono', 'comic code ligatures', Monaco, 'SF Mono'",
+    "editor.fontFamily": "'comic code ligatures', 'sf mono', Monaco, 'SF Mono'",
     "editor.fontSize": 15,
     "editor.fontLigatures": true,
     "editor.fontWeight": "normal",
-    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "C_Cpp.intelliSenseEngine": "default",
+    "clangd.enable": false,
 
     "editor.cursorStyle": "block",
-    
+
     // for mac users
-    "clangd.path": "/usr/bin/clangd",
+    // "clangd.path": "/usr/bin/clangd",
     // "clangd.arguments": ["-std=c++20"],
 
     // for windows users
     // "clangd.path": "C:\\Program Files\\LLVM\\bin\\clangd.exe",
-
 
     "terminal.integrated.shellIntegration.enabled": true,
     "terminal.integrated.profiles.windows": {
@@ -24,7 +24,7 @@
             "args": [
                 "-NoExit",
                 "-Command",
-                "${workspaceFolder}/build_scripts/windows/set_aliases.ps1"
+                "& \"${workspaceFolder}/build_scripts/windows/set_aliases.ps1\""
             ]
         }
     },
@@ -78,5 +78,62 @@
 
     "editor.bracketPairColorization.enabled": false,
     "editor.minimap.enabled": false,
-    "C_Cpp.errorSquiggles": "enabled"
+    "C_Cpp.errorSquiggles": "enabled",
+    "files.associations": {
+        "type_traits": "cpp",
+        "concepts": "cpp",
+        "cassert": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "algorithm": "cpp",
+        "array": "cpp",
+        "atomic": "cpp",
+        "bit": "cpp",
+        "bitset": "cpp",
+        "cctype": "cpp",
+        "charconv": "cpp",
+        "clocale": "cpp",
+        "cmath": "cpp",
+        "compare": "cpp",
+        "cstddef": "cpp",
+        "cstdint": "cpp",
+        "cstdio": "cpp",
+        "ctime": "cpp",
+        "cwchar": "cpp",
+        "exception": "cpp",
+        "format": "cpp",
+        "initializer_list": "cpp",
+        "ios": "cpp",
+        "iosfwd": "cpp",
+        "iostream": "cpp",
+        "istream": "cpp",
+        "iterator": "cpp",
+        "limits": "cpp",
+        "locale": "cpp",
+        "memory": "cpp",
+        "new": "cpp",
+        "optional": "cpp",
+        "ostream": "cpp",
+        "stdexcept": "cpp",
+        "streambuf": "cpp",
+        "string": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "typeinfo": "cpp",
+        "utility": "cpp",
+        "vector": "cpp",
+        "xfacet": "cpp",
+        "xiosbase": "cpp",
+        "xlocale": "cpp",
+        "xlocbuf": "cpp",
+        "xlocinfo": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xloctime": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp",
+        "xtr1common": "cpp",
+        "xutility": "cpp"
+    }
 }

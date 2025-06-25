@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <types.hpp>
 #include <containers/stack.hpp>
 
 template<typename T>
@@ -17,9 +16,8 @@ struct Handle {
 template<podtype T>
 class Pool {
   public:
-    Pool() 
-        : numAllocations_(0), 
-          capacity_(64)
+    Pool() : numAllocations_(0),
+             capacity_(64)
     {
         arr_  = static_cast<T*>( malloc(capacity_ * sizeof(T)) );
         generations_ = static_cast<uint16_t *>( calloc(capacity_, sizeof(uint16_t)) );
@@ -33,13 +31,13 @@ class Pool {
     Pool& operator= (const Pool& other) = delete;
     Pool& operator= (Pool&& other) = delete;
 
-    [[nodiscard]] 
+    [[nodiscard]]
     Handle<T> allocate() {
         if ((numAllocations_+1) >= capacity_) {
             expand();
         }
         ++numAllocations_;
-        
+
         Handle<T> handle;
         handle.index_ = freelist_.pop();
         handle.gen_ = generations_[handle.index_];
@@ -68,19 +66,19 @@ class Pool {
         if (arr_) { free(arr_); }
         if (generations_) { free(generations_); }
     }
-    
+
   private:
     void expand() {
         uint16_t oldCapacity = capacity_;
         capacity_ *= 2;
         generations_ = static_cast<uint16_t *>( realloc(generations_, capacity_ * sizeof(uint16_t)) );
         memset(generations_ + oldCapacity, 0, (capacity_ - oldCapacity) * sizeof(uint16_t));
-        arr_ = static_cast<T*>( realloc(arr_, capacity_ * sizeof(T)) );  
+        arr_ = static_cast<T*>( realloc(arr_, capacity_ * sizeof(T)) );
 
         freelist_.reserve(capacity_);
         for (int i=oldCapacity; i<capacity_; ++i) {
             freelist_.push_safe(i);
-        }    
+        }
     }
 
   private:

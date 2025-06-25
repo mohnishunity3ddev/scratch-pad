@@ -3,26 +3,28 @@
 CompileFlags:
   Add:
       # Common flags for both platforms
-    - -std=c++23
     - -xc++
-    - -D__cplusplus=201703L
+    - -std=c++23
 
     # windows-specific
-    # - --target=x86_64-pc-windows-msvc
-    # - -fms-compatibility
-    # - -fms-extensions
-    # - -fdelayed-template-parsing
+    - --target=x86_64-pc-windows-msvc
+    - -fms-compatibility
+    - -fms-extensions
+    - -fdelayed-template-parsing
+    - -D__cplusplus=202302L
 
-    # macos specific 
-    - -D_LIBCPP_STD_VER=23   # Tell libc++ to use C++17
+
+    # macos specific
+    # - -D_LIBCPP_STD_VER=23   # Tell libc++ to use C++17
 
     # ignore warnings
     - -Wno-macro-redefined
     - -Wno-declaration-after-statement
     - -Wno-newline-eof
     - -Wno-invalid_decl_spec_combination
+    - -D_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 
-    # custom defines    
+    # custom defines
     - -DFREELIST2_ALLOCATOR_IMPLEMENTATION
     - -DFREELIST_ALLOCATOR_IMPLEMENTATION
     - -DFREELIST_ALLOCATOR_UNIT_TESTS
@@ -38,7 +40,7 @@ CompileFlags:
     - -DSTRING32_UNIT_TESTS
     - -DMUTABLE_STRINGS
 
-    # SIMD-specific 
+    # SIMD-specific
     # - -DHAS_AVX
     # - -DHAS_AVX2
     # - -DHAS_SSE2
@@ -52,7 +54,7 @@ CompileFlags:
     # - -msse3
     # - -msse4.1
     # - -msse4.2
-        
+
     # Uncomment if you want more warnings:
     # - -Wall
     # - -Wextra
