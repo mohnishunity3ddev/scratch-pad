@@ -9,14 +9,12 @@
 template<podtype T, std::unsigned_integral IndexType = uint16_t>
 class Stack {
   public:
-    Stack() 
-        : capacity_(64), top_(-1) 
+    Stack() : capacity_(64), top_(-1)
     {
         data_ = (T*)malloc(capacity_ * sizeof(T));
         assert(data_ && "malloc failed");
     };
-    Stack(IndexType initialCapacity) 
-        : capacity_(initialCapacity), top_(-1) 
+    Stack(IndexType initialCapacity) : capacity_(initialCapacity), top_(-1)
     {
         data_ = (T*)malloc(initialCapacity * sizeof(T));
         assert(data_ && "malloc failed");
@@ -27,10 +25,17 @@ class Stack {
     Stack& operator= (const Stack& other) = delete;
     Stack& operator=(Stack&& other) = delete;
 
-    ~Stack() { if (data_) free(data_); }
-    
+    ~Stack()
+    {
+        if (data_) {
+            free(data_);
+        }
+    }
+
     void push(const T& value) {
-        if (full()) expand();
+        if (full()) {
+            expand();
+        }
         data_[++top_] = value;
     }
 
@@ -56,8 +61,8 @@ class Stack {
     }
 
     [[nodiscard]]
-    inline bool full() const noexcept { 
-        return ((uint16_t)(top_+1) >= capacity_); 
+    inline bool full() const noexcept {
+        return ((uint16_t)(top_+1) >= capacity_);
     }
     [[nodiscard]]
     inline bool empty() const noexcept { return top_ == -1; }
@@ -65,10 +70,10 @@ class Stack {
   private:
     T* data_ = nullptr;
     IndexType top_, capacity_;
-    
-    void expand() { 
+
+    void expand() {
         constexpr IndexType maxCap = std::numeric_limits<IndexType>::max() - 1;
-        
+
         if (capacity_ >= maxCap/2) {
             capacity_ = maxCap;
         } else {
