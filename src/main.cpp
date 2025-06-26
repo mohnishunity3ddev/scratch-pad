@@ -77,19 +77,6 @@ main()
 // #endif
 
     // driver22();
-
-    struct texture {
-        int a,b;
-    };
-
-    Pool<texture> texturePool;
-    auto h1 = texturePool.allocate();
-    auto *v = texturePool.get(h1);
-    v->a = 1;
-    v->b = 2;
-    texturePool.recycle(h1);
-    v = texturePool.get(h1);
-    assert(v == nullptr);
-
+    
     return 0;
 }

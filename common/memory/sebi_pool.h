@@ -11,16 +11,24 @@ template<typename T>
 struct Handle {
     uint16_t index_;
     uint16_t gen_;
+    
+    bool operator!=(const Handle<T> &other) const {
+        return index_ != other.index_ || gen_ != other.gen_;
+    }
+
+    bool operator==(const Handle<T> &other) const {
+        return index_ == other.index_ || gen_ == other.gen_;
+    }
 };
 
 template<podtype T>
 class Pool {
   public:
-    Pool() : numAllocations_(0),
-             capacity_(64)
+    Pool() : capacity_(64)
     {
         arr_  = static_cast<T*>( malloc(capacity_ * sizeof(T)) );
         generations_ = static_cast<uint16_t *>( calloc(capacity_, sizeof(uint16_t)) );
+        // TODO: Bulk fill stack and set top thereafter.
         for (int i = 0; i < 64; ++i) {
             freelist_.push_safe(63-i);
         }
@@ -45,11 +53,12 @@ class Pool {
     }
 
     void recycle(const Handle<T>& handle) {
-        assert(handle.gen_ == generations_[handle.index_]);
-        freelist_.push(handle.index_);
-        if (generations_[handle.index_] + 1 < generations_[handle.index_]) {
-            assert(!"overflow!");
+        if (handle.gen_ != generations_[handle.index_]) {
+            printf("[InvalidHandle]/[UseAfterFree]: returning...\n");
+            return;
         }
+        freelist_.push(handle.index_);
+        assert(generations_[handle.index_] + 1 > generations_[handle.index_] && "Overflow condition!");
         ++generations_[handle.index_];
         --numAllocations_;
     }
@@ -67,6 +76,7 @@ class Pool {
         if (generations_) { free(generations_); }
     }
 
+
   private:
     void expand() {
         uint16_t oldCapacity = capacity_;
@@ -76,16 +86,17 @@ class Pool {
         arr_ = static_cast<T*>( realloc(arr_, capacity_ * sizeof(T)) );
 
         freelist_.reserve(capacity_);
-        for (int i=oldCapacity; i<capacity_; ++i) {
+        // TODO: Bulk fill stack and set top thereafter.
+        for (int i = oldCapacity; i < capacity_; ++i) {
             freelist_.push_safe(i);
         }
     }
 
   private:
-    T *arr_;
-    uint16_t *generations_;
+    T *arr_{ nullptr };
+    uint16_t *generations_{ nullptr };
     Stack<uint16_t> freelist_;
 
-    uint16_t capacity_;
-    uint16_t numAllocations_;
+    uint16_t capacity_ {0};
+    uint16_t numAllocations_ {0};
 };

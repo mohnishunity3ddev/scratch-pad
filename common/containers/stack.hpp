@@ -56,7 +56,7 @@ class Stack {
             return;
         }
 
-        data_ = static_cast<T*>(realloc(data_, newCapacity * sizeof(T)));
+        data_ = static_cast<T*>( realloc(data_, newCapacity * sizeof(T)) );
         capacity_ = newCapacity;
     }
 
