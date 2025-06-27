@@ -79,7 +79,7 @@ class Stack {
         } else {
             capacity_ *= 2;
         }
-        data_ = (T*)realloc( data_, capacity_ * sizeof(T));
+        data_ = static_cast<T*>( realloc( data_, capacity_ * sizeof(T)) );
         assert(data_ && "realloc failed");
     }
 };

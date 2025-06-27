@@ -104,8 +104,8 @@ class Pool {
 
 // FIXME: This suffers from false sharing. Consider sharding. the ThreadSafeHandle gets a shard index. shard array
 // contains arr_, generations_ etc. when allocating =, shard_index is atomically incremented in a round robin
-// fashion to get the shard for the ThreadHandle. mmake sure the shard struct is atleast equal to the
-// CACHE_LINE_SIZE (64 bytes). This will reduce contention.
+// fashion to get the shard for the ThreadHandle. make sure the shard struct is atleast equal to the
+// CACHE_LINE_SIZE (64 bytes) to avoid cache ping-pong.
 template<podtype T>
 class ThreadSafePool {
   public:
