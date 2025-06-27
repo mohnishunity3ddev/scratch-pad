@@ -1,11 +1,13 @@
 #pragma once
 #include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <optional>
 #include <stdint.h>
 #include <limits>
 #include <cstdlib>
 #include <types.hpp>
+#include <vector>
 
 template<podtype T, std::unsigned_integral IndexType = uint16_t>
 class Stack {
@@ -132,7 +134,6 @@ class LockFreeStackArray
             {
                 // This write is protected: No pop will read from this slot while the pending bit is set.
                 data_[count] = item;
-
                 state_.store(count + 1, std::memory_order_release);
                 return true;
             }
@@ -202,61 +203,58 @@ class LockFreeStackArray
 
 void lockfree_stack_test() {
     const int thread_count = std::thread::hardware_concurrency();
+    const int pusher_count = thread_count / 2;
+    const int popper_count = thread_count - pusher_count;
+    printf("thread_count: %d, pusher_count: %d, popper_count: %d\n", thread_count, pusher_count, popper_count);
+    constexpr int num_iterations = 1'000'000;
+    const size_t stack_capacity = pusher_count * num_iterations;
+
     for (int i = 0; i < 1000; ++i) {
-        LockFreeStackArray<int> stack(1'000'000);
+        LockFreeStackArray<int> stack(stack_capacity);
         std::atomic<bool> start{false};
-        constexpr int iter = 1'000'000;
-        
-        std::thread pusher1 = std::thread([&] {
-            while (!start.load(std::memory_order_acquire)) {}
+        std::vector<std::thread> pushers;
+        std::vector<std::thread> poppers;
 
-            for (int j = 0; j < iter; ++j) {
-                while (!stack.push(j)) {
-                    // Retry if stack is full
-                    std::this_thread::yield();
+        for (int i = 0; i < pusher_count; ++i) {
+            pushers.emplace_back([&, i] {
+                while (!start.load(std::memory_order_acquire)) {}
+
+                for (int j = 0; j < num_iterations; ++j) {
+                    while (!stack.push(j)) {
+                        // Retry if stack is full
+                        std::this_thread::yield();
+                    }
+                    // size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+                    // printf("pusher[%zu] pushed %d.\n", tid, j);
                 }
-            }
-        });
+            });
+        }
 
-        std::thread pusher2 = std::thread([&] {
-            while (!start.load(std::memory_order_acquire)) {}
+        for (int i = 0; i < popper_count; ++i) {
+            poppers.emplace_back([&, i] {
+                while (!start.load(std::memory_order_acquire)) {}
 
-            for (int j = 0; j < iter; ++j) {
-                while (!stack.push(iter + j)) {
-                    // Retry if stack is full
-                    std::this_thread::yield();
+                for (int j = 0; j < num_iterations; ++j) {
+                    std::optional<int> result;
+
+                    while (!stack.pop()) {
+                        // Retry if stack is empty
+                        std::this_thread::yield();
+                    }
+                    // size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+                    // printf("popper[%zu] popped.\n", tid);
                 }
-            }
-        });
-
-        std::thread popper1 = std::thread([&] {
-            while (!start.load(std::memory_order_acquire)) {}
-
-            for (int j = 0; j < iter; ++j) {
-                while (!stack.pop()) {
-                    // Retry if stack is empty
-                    std::this_thread::yield();
-                }
-            }
-        });
-
-        std::thread popper2 = std::thread([&] {
-            while (!start.load(std::memory_order_acquire)) {}
-
-            for (int j = 0; j < iter; ++j) {
-                while (!stack.pop()) {
-                    // Retry if stack is empty
-                    std::this_thread::yield();
-                }
-            }
-        });
+            });
+        }
 
         start.store(true, std::memory_order_release);
 
-        pusher1.join();
-        pusher2.join();
-        popper1.join();
-        popper2.join();
+        for (auto& pusher : pushers) {
+            pusher.join();
+        }
+        for (auto& popper : poppers) {
+            popper.join();
+        }
 
         if (stack.size() > 0) {
             assert(0);
