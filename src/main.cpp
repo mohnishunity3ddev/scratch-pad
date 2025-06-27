@@ -47,6 +47,7 @@
 // #include <math/mat.h>
 // #include <memory/bitmapped_alloc.h>
 
+#include "containers/stack.hpp"
 #include <cassert>
 #include <cstdint>
 #include <memory/sebi_pool.h>
@@ -76,7 +77,8 @@ main()
 //     clock.end();
 // #endif
 
-    // driver22();
-    
+// driver22();
+    lockfree_stack_test();
+
     return 0;
 }

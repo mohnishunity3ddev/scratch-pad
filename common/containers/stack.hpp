@@ -127,9 +127,10 @@ class LockFreeStackArray
 
             uint64_t new_state = (count + 1) | PENDING_BIT;
             if (state_.compare_exchange_weak(current_state, new_state,
-                                            std::memory_order_acquire,
+                                            std::memory_order_relaxed,
                                             std::memory_order_relaxed))
             {
+                // This write is protected: No pop will read from this slot while the pending bit is set.
                 data_[count] = item;
 
                 state_.store(count + 1, std::memory_order_release);
@@ -157,7 +158,7 @@ class LockFreeStackArray
             // set pending bit
             uint64_t new_state = (count - 1) | PENDING_BIT;
             if (state_.compare_exchange_weak(current_state, new_state,
-                                            std::memory_order_acquire,
+                                            std::memory_order_relaxed,
                                             std::memory_order_relaxed))
             {
                 T result = data_[count - 1];
@@ -205,7 +206,7 @@ void lockfree_stack_test() {
         LockFreeStackArray<int> stack(1'000'000);
         std::atomic<bool> start{false};
         constexpr int iter = 1'000'000;
-
+        
         std::thread pusher1 = std::thread([&] {
             while (!start.load(std::memory_order_acquire)) {}
 
