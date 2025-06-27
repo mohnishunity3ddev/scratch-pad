@@ -53,7 +53,7 @@ class Pool {
         return handle;
     }
 
-    void recycle(const Handle<T>& handle) {
+    void recycle(const Handle<T> handle) {
         if (handle.gen_ != generations_[handle.index_]) {
             printf("[InvalidHandle]/[UseAfterFree]: returning...\n");
             return;
@@ -65,7 +65,7 @@ class Pool {
     }
 
     [[nodiscard]]
-    T* get(const Handle<T>& handle) const noexcept {
+    T* get(const Handle<T> handle) const noexcept {
         if (handle.gen_ != generations_[handle.index_]) {
             return nullptr;
         }
