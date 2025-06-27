@@ -6,12 +6,13 @@
 #include <cstring>
 
 #include <containers/stack.hpp>
+#include <shared_mutex>
 
 template<typename T>
 struct Handle {
     uint16_t index_;
     uint16_t gen_;
-    
+
     bool operator!=(const Handle<T> &other) const {
         return index_ != other.index_ || gen_ != other.gen_;
     }
@@ -99,4 +100,39 @@ class Pool {
 
     uint16_t capacity_ {0};
     uint16_t numAllocations_ {0};
+};
+
+// FIXME: This suffers from false sharing. Consider sharding. the ThreadSafeHandle gets a shard index. shard array
+// contains arr_, generations_ etc. when allocating =, shard_index is atomically incremented in a round robin
+// fashion to get the shard for the ThreadHandle. mmake sure the shard struct is atleast equal to the
+// CACHE_LINE_SIZE (64 bytes). This will reduce contention.
+template<podtype T>
+class ThreadSafePool {
+  public:
+    ThreadSafePool(const ThreadSafePool& other) = delete;
+    ThreadSafePool(ThreadSafePool&& other) = delete;
+    ThreadSafePool& operator= (const ThreadSafePool& other) = delete;
+    ThreadSafePool& operator= (ThreadSafePool&& other) = delete;
+
+    [[nodiscard]]
+    Handle<T> allocate() {
+        std::lock_guard<std::shared_mutex> lock{m};
+        return pool_.allocate();
+    }
+
+    void recycle(const Handle<T>& handle) {
+        std::lock_guard<std::shared_mutex> lock{ m };
+        pool_.recycle(handle);
+    }
+
+    [[nodiscard]]
+    T *get(const Handle<T> &handle) const noexcept
+    {
+        std::shared_lock lock{ m };
+        return pool_.get(handle);
+    }
+
+  private:
+    Pool<T> pool_{};
+    mutable std::shared_mutex m;
 };
