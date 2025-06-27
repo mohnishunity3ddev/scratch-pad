@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <stdint.h>
 #include <limits>
 #include <cstdlib>
@@ -137,7 +138,7 @@ class LockFreeStackArray
         }
     }
 
-    bool pop()
+    std::optional<T> pop()
     {
         uint64_t current_state = state_.load(std::memory_order_acquire);
 
@@ -150,7 +151,7 @@ class LockFreeStackArray
 
             uint64_t count = current_state & COUNT_MASK;
             if (count == 0) {
-                return false;
+                return std::nullopt;
             }
 
             // set pending bit

@@ -119,7 +119,7 @@ class ThreadSafePool {
         std::lock_guard<std::shared_mutex> lock{m};
         return pool_.allocate();
     }
-
+    
     void recycle(const Handle<T>& handle) {
         std::lock_guard<std::shared_mutex> lock{ m };
         pool_.recycle(handle);
