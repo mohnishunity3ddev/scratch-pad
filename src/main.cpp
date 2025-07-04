@@ -1,5 +1,3 @@
-// #define STB_DS_IMPLEMENTATION
-// #include <stb/stb_ds.h>
 // #include <stdio.h>
 
 // #define LINEAR_ALLOCATOR_IMPLEMENTATION
@@ -53,32 +51,9 @@
 #include <memory/sebi_pool.h>
 
 int
-main()
+main(int argc, char **argv)
 {
-//     size_t memSize = 1024*1024;
-//     void *memory = malloc(memSize);
-
-// #ifdef _DEBUG
-//     handle_unit_tests(memory, memSize);
-// #endif
-//     free(memory);
-
-//     // driver();
-//     // mat4driver();
-
-// #if 1
-//     Clock clock = Clock();
-//     clock.begin("Start of main");
-//     int numtests = 10;
-//     for (int i = 0; i < numtests; ++i) {
-//         freelist_unit_tests();
-//         freelist2_unit_tests();
-//     }
-//     clock.end();
-// #endif
-
-// driver22();
-    lockfree_stack_test();
-
-    return 0;
+    ::testing::InitGoogleTest(&argc, argv);
+    int result = RUN_ALL_TESTS();
+    return result;
 }

@@ -196,7 +196,7 @@ class LockFreeStackArray
     // A single atomic that encodes both the count and a "pending" bit
     // Lower 63 bits: stack_size, MSB: indicates if a push is in progress
     std::atomic<uint64_t> state_;
-
+    
     static constexpr uint64_t PENDING_BIT = 1ULL << 63;
     static constexpr uint64_t COUNT_MASK = ~PENDING_BIT;
 };

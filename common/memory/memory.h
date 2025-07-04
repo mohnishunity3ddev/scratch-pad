@@ -34,9 +34,10 @@ getLabel(const char *s)
 }
 #endif
 
-#define KILOBYTES(kb) ((kb)*1024)
-#define MEGABYTES(mb) (KILOBYTES((mb))*1024)
-#define GIGABYTES(gb) (MEGABYTES((gb))*1024)
+#define KILOBYTES(v) ((v)*1024LL)
+#define MEGABYTES(v) (KILOBYTES(v)*1024LL)
+#define GIGABYTES(v) (MEGABYTES(v)*1024LL)
+#define TERABYTES(v) (GIGABYTES(v)*1024LL)
 
 typedef enum Placement_Policy
 {
@@ -89,12 +90,8 @@ inline uintptr_t
 align_forward(uintptr_t ptr, size_t align)
 {
     assert(is_power_of_2(align));
-
-    // p % a since a is a power of 2.
     uintptr_t modulo = (ptr & (align - 1));
-
-    // ptr + (align-modulo) is divisible by p
-    return ptr + (align-modulo);
+    return !modulo ? ptr : ptr + (align-modulo);
 }
 
 inline size_t

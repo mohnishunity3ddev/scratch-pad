@@ -12,6 +12,7 @@ CompileFlags:
     - -fms-extensions
     - -fdelayed-template-parsing
     - -D__cplusplus=202302L
+    - -D_AMD64_
 
 
     # macos specific
@@ -36,7 +37,6 @@ CompileFlags:
     - -DPOOL_ALLOCATOR_IMPLEMENTATION
     - -DDARR_IMPLEMENTATION
     - -DAVL_IMPLEMENTATION
-    - -DSTB_SPRINTF_IMPLEMENTATION
     - -DSTRING32_UNIT_TESTS
     - -DMUTABLE_STRINGS
 

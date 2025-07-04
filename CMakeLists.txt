@@ -98,6 +98,7 @@ if(WIN32)
     add_definitions(-DNOMINMAX)
 endif()
 
+include_directories(third-party/gtest/googletest/include)
 include_directories(common)
 
 # add_custom_command(
@@ -107,5 +108,6 @@ include_directories(common)
 # )
 
 # Include Common SharedUtils
+add_subdirectory(third-party/gtest)
 add_subdirectory(common)
 add_subdirectory(src)

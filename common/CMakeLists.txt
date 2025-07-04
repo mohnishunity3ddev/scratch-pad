@@ -28,8 +28,10 @@ project(SharedUtils C CXX)
 file(GLOB_RECURSE SRC_FILES     LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.c *.cpp)
 file(GLOB_RECURSE HEADER_FILES  LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.h *.hpp)
 
+add_library(SharedUtils ${SRC_FILES} ${HEADER_FILES})
+target_link_libraries(SharedUtils gtest gtest_main)
+
 if(NOT SRC_FILES STREQUAL "")
-    add_library(SharedUtils ${SRC_FILES} ${HEADER_FILES})
 
     # set_property(TARGET SharedUtils PROPERTY CXX_STANDARD 20)
     # set_property(TARGET SharedUtils PROPERTY CXX_STANDARD_REQUIRED ON)
