@@ -128,7 +128,7 @@ class ThreadSafePoolStack
     {
         return sizeof(uint64_t) * max_capacity_allowed;
     }
-    
+
     ThreadSafePoolStack() = default;
     ThreadSafePoolStack(const ThreadSafePoolStack &other) = delete;
     ThreadSafePoolStack(ThreadSafePoolStack &&other) = delete;
@@ -225,14 +225,13 @@ class ThreadSafePool
         std::shared_lock<std::shared_mutex> read_lock{ rw_mtx };
         IndexType free_index = freelist_.pop();
         if (free_index == INVALID_INDEX_) {
+            /* not doing this now since it's racey */
             // read_lock.unlock();
             // expand();
             // read_lock.lock();
             // free_index = freelist_.pop();
             assert(!"cannot expand without races for now!");
         }
-
-        // num_allocations.fetch_add(1, std::memory_order_acq_rel);
 
         Handle<T, IndexType> handle;
         handle.index_ = free_index;
@@ -269,41 +268,14 @@ class ThreadSafePool
     {
         std::lock_guard<std::shared_mutex> write_lock{ rw_mtx };
         IndexType batched_count = batched_deletes_count_;
-        // printf("cleaning up pool: there are %d elements batched for deletion.\n", batched_count);
         freelist_.push_multiple(batched_deletes_, batched_count);
         for (int i = 0; i < batched_count; ++i) {
             ++generations_[batched_deletes_[i]];
         }
 
-        // uint64_t alloc_num = num_allocations.load(std::memory_order_acquire);
-        // assert(alloc_num >= batched_deletes_count_);
-        // num_allocations.fetch_sub(batched_deletes_count_, std::memory_order_release);
-
         batched_deletes_count_ = 0;
     }
 
-    /*
-    uint64_t get_allocation_count() const {
-        return num_allocations.load();
-    }
-    */
-
-  private:
-      /** not using this.
-      void expand()
-      {
-          assert(!"should not be here!");
-          std::lock_guard<std::shared_mutex> write_lock{rw_mtx};
-          if (capacity_*2 >= max_capacity_allowed) {
-              assert(!"Cannot expand this pool further!");
-          }
-          printf("[LFPool::Expand()]: expanding pool from %zu to %zu ...", capacity_, capacity_ * 2);
-
-          freelist_.expand(capacity_, capacity_ * 2);
-          capacity_ *= 2;
-          puts(" ... done");
-      }
-      */
   private:
     alignas(64) T *arr_;
     alignas(64) uint64_t *generations_;
@@ -435,30 +407,6 @@ TEST_F(ThreadSafePoolTest, BasicAllocationAndRecycle) {
     EXPECT_EQ(obj3, nullptr);
 }
 
-/** not doing expansion for now.
-TEST_F(ThreadSafePoolTest, PoolExpansion) {
-    std::vector<Handle<TestObject>> handles;
-    for (int i = 0; i < initial_capacity_ * 3; ++i) {
-        auto handle = pool_->allocate();
-        handles.push_back(handle);
-
-        TestObject *obj = pool_->get(handle);
-        ASSERT_NE(obj, nullptr);
-        obj->id = i;
-    }
-
-    for (size_t i = 0; i < handles.size(); ++i) {
-        TestObject *obj = pool_->get(handles[i]);
-        ASSERT_NE(obj, nullptr);
-        EXPECT_EQ(obj->id, static_cast<int>(i));
-    }
-
-    for (size_t i = 0; i < handles.size()/2; ++i) {
-        pool_->recycle(handles[i]);
-    }
-}
-*/
-
 TEST_F(ThreadSafePoolTest, UseAfterFreeDetection) {
     auto handle = pool_->allocate();
     TestObject *obj = pool_->get(handle);
@@ -486,7 +434,6 @@ TEST_F(ThreadSafePoolTest, UseAfterFreeDetection) {
 TEST_F(ThreadSafePoolTest, ConcurrentAllocationStress) {
     const int num_threads = std::thread::hardware_concurrency();
     const size_t allocations_per_thread = (pool_->max_capacity_allowed / (size_t)num_threads);
-
 
     std::atomic_int total_allocations{0};
     std::atomic_int failed_allocations{0};
