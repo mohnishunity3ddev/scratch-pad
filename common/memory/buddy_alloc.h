@@ -50,7 +50,7 @@ buddy_block_find_best(buddy_block *head, buddy_block *tail, size_t size)
     {
         return buddy_block_split(block, size);
     }
-    
+
     // Find the block which is the 'best_block' to requested allocation sized
     while (block < tail && buddy < tail) { // make sure the buddies are within the range
         // If both buddies are free, coalesce them together
@@ -118,11 +118,11 @@ void
 buddy_allocator_init(buddy_allocator *b, void *data, size_t size, size_t alignment)
 {
     assert(data != NULL);
-    assert(is_power_of_two(size) && "size is not a power-of-two");
-    assert(is_power_of_two(alignment) && "alignment is not a power-of-two");
+    assert(is_power_of_2(size) && "size is not a power-of-two");
+    assert(is_power_of_2(alignment) && "alignment is not a power-of-two");
 
     // The minimum alignment depends on the size of the `buddy_block` header
-    assert(is_power_of_two(sizeof(buddy_block)) == 0);
+    assert(is_power_of_2(sizeof(buddy_block)) == 0);
     if (alignment < sizeof(buddy_block))
     {
         alignment = sizeof(buddy_block);
@@ -145,7 +145,7 @@ buddy_block_size_required(buddy_allocator *b, size_t size)
     size_t actual_size = b->alignment;
 
     size += sizeof(buddy_block);
-    size = align_forward_size(size, b->alignment);
+    size = align_forward(size, b->alignment);
 
     while (size > actual_size) {
         actual_size <<= 1;

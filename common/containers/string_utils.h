@@ -99,8 +99,9 @@ string32_append(string32 *s, const char *c_str, const alloc_api *api)
         s->length = total_length - 1;
         s->data.sso_string[lenA + lenB] = '\0';
     } else {
-        if (api == NULL)
+        if (api == nullptr) {
             api = alloc_api_global;
+        }
         void *memory = (void *)s->data.mem;
         if (s->is_sso) {
             memory = shalloc_arr(api,char,total_length);

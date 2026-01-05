@@ -362,7 +362,7 @@ handle_unit_tests(void *memory, size_t memory_size)
         assert(t.b == ('a'+i));
         assert(t.c == (1000+i));
     }
-
+    
     testArrayHandle.free();
 
     /*

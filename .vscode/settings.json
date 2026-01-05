@@ -72,6 +72,12 @@
     //     "editor.background": "#111111"
     // },
 
+    "github.copilot.enable": {
+        "*": false, // Disables Copilot for all languages
+        "plaintext": false, // Example: disable for specific file types
+        "python": false // Example: disable for Python
+    },
+
     "zenMode.fullScreen": true,
     "zenMode.hideStatusBar": true,
     "zenMode.showTabs": "single",
@@ -136,5 +142,8 @@
         "xstring": "cpp",
         "xtr1common": "cpp",
         "xutility": "cpp"
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
     }
 }
