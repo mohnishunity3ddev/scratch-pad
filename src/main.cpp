@@ -51,13 +51,16 @@
 // #include <memory/sebi_pool.h>
 // #include <containers/OffsetAllocator/offsetAllocator.hpp>
 
-#include <memory/tlsf.h>
+#include <memory/tlsf_tests.cpp>
 
 int main(int argc, char **argv)
 {
-    Tlsf::Allocator allocator;
+
+    Tlsf::tests();
 
     /*
+    Tlsf::Allocator allocator;
+
     // uint32_t binIndex0 = allocator.allocate(0); assert(binIndex0 == 0);
     uint32_t binIndex1 = allocator.allocate(1); assert(binIndex1 == 1);
     uint32_t binIndex2 = allocator.allocate(2); assert(binIndex2 == 2);
@@ -298,9 +301,10 @@ int main(int argc, char **argv)
     uint32_t binIndex237 = allocator.allocate(3489660928); assert(binIndex237 == 237);
     uint32_t binIndex238 = allocator.allocate(3758096384); assert(binIndex238 == 238);
     uint32_t binIndex239 = allocator.allocate(4026531840); assert(binIndex239 == 239);
-    */
 
     allocator.allocate(1000);
+    */
+
 
     int x = 0;
 }

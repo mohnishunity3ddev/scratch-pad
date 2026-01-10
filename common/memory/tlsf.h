@@ -10,6 +10,12 @@
 namespace Tlsf
 {
 
+struct Allocation
+{
+    uint32_t offset;
+    uint32_t nodeIndex;
+};
+
 class Allocator
 {
     typedef uint32_t NodePtr_t;
@@ -18,10 +24,13 @@ class Allocator
 
     static constexpr uint32_t L1_BIN_COUNT = 32; /* level-1 bins */
     static constexpr uint32_t L2_LOG2_BINCOUNT = 3;
-    static constexpr uint32_t L2_BIN_COUNT = (1 << L2_LOG2_BINCOUNT); /* lvl-2 bins = 2^(L2_LOG2_BINCOUNT) */
+    /* 8 lvl-2 bins for each l1 range = 2^(L2_LOG2_BINCOUNT) = 2^3 = 8 */
+    static constexpr uint32_t L2_BIN_COUNT = (1 << L2_LOG2_BINCOUNT);
     static constexpr uint32_t L2_MASK = L2_BIN_COUNT - 1;
-
     static constexpr uint32_t TOTAL_BIN_COUNT = L1_BIN_COUNT * L2_BIN_COUNT;
+    /* each l2Bitmask has 8 bits, one bit for each freelist for that size class. */
+    static constexpr uint32_t L2_BITMASK_COUNT = TOTAL_BIN_COUNT / 8;
+
     static constexpr uint32_t MIN_SIZE_ALLOWED = 8; /* minimum 8 bytes */
 
   private:
@@ -71,6 +80,7 @@ class Allocator
         uint32_t l1Index = msbIndex(size);
         assert(l1Index >= 3 && l1Index < L1_BIN_COUNT);
 
+        /// l2Index is the subdivision within the l1 range.
         uint32_t diff = size - (1 << l1Index);
         uint32_t l2Index = (diff >> (l1Index - L2_LOG2_BINCOUNT));
         assert(l2Index < L2_BIN_COUNT);
@@ -132,34 +142,42 @@ class Allocator
     /* get the freelist index corresponding to the l1 and l2 indices passed in here.
      * suitable here means we need to find the a freeblock correponding to the indices passed in
      * OR look for a bigger one in the upper levels.
+     * IMPORTANT: TLSF avoids using loops while searching. the search here is O(1)
      */
     void findSuitableFreelist(uint32_t& l1Index, uint32_t& l2Index, uint32_t &freelistIndex)
     {
         /* see if there is a freeblock in this l1. */
-        uint32_t mask = 1 << l1Index;
+        uint32_t mask = 1u << l1Index;
         if ((m_l1Bitmask & mask) == 0) {
             /// No freeblock in this l1. jump to the next larger level l1.
+            /// IMPORTANT: This is key for searching in O(1). We dont run a loop we get the first free l1 level.
+            /// The bit scan does it all in one go.
             uint32_t b = m_l1Bitmask >> (l1Index + 1);
 
             /* no memory */
-            if (!b) { assert(!"INVALID_INDEX"); freelistIndex = INVALID_INDEX; return; }
+            if (!b) {
+                assert(!"INVALID_INDEX");
+                freelistIndex = INVALID_INDEX;
+                return;
+            }
+
             /// update l1 index to the new one that has freeblocks with the requested size.
             uint32_t i = lsbIndex(b)+1;
             l1Index += i;
+            /// we are looking at a higher l1 level than sent in here. We should look at the first
+            /// l2 bin at that higher level.
+            l2Index = 0;
         }
-
+        
         /* find a suitable l2 bin within this l1. */
-        uint32_t l2MaskIndex = l1Index << L2_LOG2_BINCOUNT;
-        uint8_t l2Mask = m_l2Bitmasks[l2MaskIndex];
-        /// is l2_mask is zero, its an error since l1 would not have been one in the code above.
-        assert(l2Mask != 0);
+        uint8_t l2Mask = m_l2Bitmasks[l1Index];
         /// check if there is a freeblock in this l2 bin.
-        if ((l2Mask & (1 << l2Index)) == 0) {
+        if ((l2Mask & (1u << l2Index)) == 0) {
             /// no block in this l2 bin. Look to the next one by shifting right.
             uint32_t b = l2Mask >> (l2Index+1);
             /* this should be guaranteed to be non-zero since the l1_index was set. */
             if (b == 0) {
-                assert(!"no memory left");
+                assert(!"Invalid Path. l2Mask should not be zero with l1 range being set above.");
                 freelistIndex = INVALID_INDEX;
                 return;
             }
@@ -200,13 +218,13 @@ class Allocator
             uint32_t l1Index = freelistIndex >> L2_LOG2_BINCOUNT;
             uint32_t l2Index = freelistIndex & L2_MASK;
 
-            m_l1Bitmask |= (1 << l1Index);
-            /// l1_index * 8. 8 is the number of l2 levels per l1 bin.
-            m_l2Bitmasks[l1Index << L2_LOG2_BINCOUNT] |= (1 << l2Index);
+            m_l1Bitmask |= (1u << l1Index);
+            /// there are 8 sizeclasses per l1. 8 sizeclass make up 8 bits for the l2Bitmask.
+            m_l2Bitmasks[l1Index] |= (1u << l2Index);
         }
 
         /* set the new head to be the new_node */
-        headNodeIndex = newNodeIndex;
+        m_freelistHeads[freelistIndex] = newNodeIndex;
 
         return newNodeIndex;
     }
@@ -232,10 +250,10 @@ class Allocator
                 /// remove the node.
                 m_freelistHeads[index] = NULLPTR;
                 /// clear out the bitmasks.
+                uint32_t l1Index = index >> L2_LOG2_BINCOUNT;
                 uint32_t l2Index = index & L2_MASK; /// l2Index = index % 8
-                m_l2Bitmasks[index] &= ~(1 << l2Index);
-                if (m_l2Bitmasks[index] == 0) {
-                    uint32_t l1Index = index >> L2_LOG2_BINCOUNT; /// l1Index = index / 8.
+                m_l2Bitmasks[l1Index] &= ~(1 << l2Index);
+                if (m_l2Bitmasks[l1Index] == 0) {
                     m_l1Bitmask &= ~(1 << l1Index);
                 }
             }
@@ -257,7 +275,7 @@ class Allocator
     }
 
   public:
-    uint32_t allocate(uint32_t size)
+    Allocation allocate(uint32_t size)
     {
         if (size == 0) {
             assert(!"Size 0 is like free that needs the mem pointer! Not applicable here!");
@@ -283,10 +301,10 @@ class Allocator
         findSuitableFreelist(l1Index, l2Index, freelistIndex);
         if (freelistIndex == INVALID_INDEX) { assert(!"No memory left"); }
 
-        NodePtr_t headIndex = m_freelistHeads[freelistIndex];
+        NodePtr_t headNodeIndex = m_freelistHeads[freelistIndex];
         /// the headnode_index shouldn't be a nullptr since freelist_index above was not an INVALID_INDEX.
-        assert(headIndex != INVALID_INDEX && headIndex < TOTAL_BIN_COUNT);
-        Node *headNode = m_nodes + headIndex;
+        assert(headNodeIndex != INVALID_INDEX && headNodeIndex < TOTAL_BIN_COUNT);
+        Node *headNode = m_nodes + headNodeIndex;
         assert(headNode->size >= size);
 
         /// remove the headNode. make it's next one the head of this freelist and
@@ -298,13 +316,11 @@ class Allocator
             /// next node is not a nullptr. It's a valid node.
             m_nodes[nextNodeIndex].prev = NULLPTR;
         } else {
-            /// nextNode is a nullptr. Therefore, the freelist is empty.
-            assert(m_nodes[nextNodeIndex].prev == NULLPTR);
             /// unset the l2 bin bit.
-            m_l2Bitmasks[freelistIndex] &= ~(1 << l2Index);
+            m_l2Bitmasks[l1Index] &= ~(1 << l2Index);
             /// if the whole l2 bin is empty(all 8 bins), then the whole range of 8 sizes that are
             /// supposed to be in an l1 bin is empty, so we gotta set the l1 bin as well.
-            if (m_l2Bitmasks[freelistIndex] == 0) {
+            if (m_l2Bitmasks[l1Index] == 0) {
                 m_l1Bitmask &= ~(1 << l1Index);
             }
         }
@@ -313,7 +329,6 @@ class Allocator
         uint32_t remainingSize = headNode->size - size;
 
         // TODO: roundup allocSize to avoid splitting blocks unless absolutely necessary.
-        // TODO: Gotta complete this case.
         if (remainingSize >= MIN_SIZE_ALLOWED)
         {
             /// insert freeblock of size 'remaining_size' into the apt freelist.
@@ -330,26 +345,34 @@ class Allocator
                 m_nodes[headNode->aoNext].aoPrevious = newNodeIndex;
             }
 
-            newNode.aoPrevious = headIndex;
+            newNode.aoPrevious = headNodeIndex;
             newNode.aoNext = headNode->aoNext;
 
             headNode->aoNext = newNodeIndex;
         }
 
-        // TODO: add the remainingSize to the dataSize returned with the allocation.
-
-        return 0;
+        headNode->allocated = true;
+        return
+        {
+            .offset = headNode->offset,
+            .nodeIndex = headNodeIndex
+        };
     }
 
-    void free(uint32_t offset, uint32_t nodeIndex)
+    void free(Allocation allocation)
     {
         /// basically what we have to do here is we have to find the node that is being freed.
         /// That node has a size associated
 
-        Node &currentNode = m_nodes[nodeIndex];
+        Node &currentNode = m_nodes[allocation.nodeIndex];
+        if (!currentNode.allocated) {
+            assert(!"Double Free");
+            return;
+        }
 
         /// check to see if we can merge with the previous address-ordered node.
-        if (currentNode.aoPrevious != NULLPTR && !m_nodes[currentNode.aoPrevious].allocated)
+        if (currentNode.aoPrevious != NULLPTR &&
+            !m_nodes[currentNode.aoPrevious].allocated)
         {
             /// remove the previous node to currentNode from it's housing freelist since it's going
             /// to be merged with the currentNode.
@@ -359,7 +382,7 @@ class Allocator
             /// do the actual merging of the current node and its addres-ordered previous node.
             currentNode.size += prevNode.size;
 
-            assert(prevNode.offset < m_nodes[nodeIndex].offset);
+            assert(prevNode.offset < m_nodes[allocation.nodeIndex].offset);
             currentNode.offset = prevNode.offset;
 
             /// the aoPrev of the prevNode should now be previous to the merged node.
@@ -367,13 +390,14 @@ class Allocator
         }
 
         /// check to see if we can merge with the next address-ordered node.
-        if (currentNode.aoNext != NULLPTR && !m_nodes[currentNode.aoNext].allocated)
+        if (currentNode.aoNext != NULLPTR &&
+            !m_nodes[currentNode.aoNext].allocated)
         {
             removeNode(currentNode.aoNext);
 
             Node &nextNode = m_nodes[currentNode.aoNext];
             currentNode.size += nextNode.size;
-            assert(nextNode.offset < m_nodes[nodeIndex].offset);
+            assert(nextNode.offset < m_nodes[allocation.nodeIndex].offset);
 
             /// the aoNext of the nextNode should be aoNext of the merged node.
             currentNode.aoNext = nextNode.aoNext;
@@ -382,13 +406,13 @@ class Allocator
         uint32_t aoPreviousCached = currentNode.aoPrevious;
         uint32_t aoNextCached = currentNode.aoNext;
 
-        m_emptyNodeStack[++m_emptyNodeStackTop] = nodeIndex;
+        m_emptyNodeStack[++m_emptyNodeStackTop] = allocation.nodeIndex;
 
         /// Now we need to insert the merged node into the appropriate freelist.
         uint32_t insertedNodeIndex = insertNode(currentNode.size, currentNode.offset);
 
         /// Just checking my brain might have farted. :P
-        assert(nodeIndex == insertedNodeIndex);
+        assert(allocation.nodeIndex == insertedNodeIndex);
 
         // TODO: insertNode() should return the same node from the stack that we pushed. So aoNext and aoPrev
         //       should be the same now as well.
@@ -396,14 +420,15 @@ class Allocator
                m_nodes[insertedNodeIndex].aoNext == aoNextCached);
     }
 
-    Allocator(uint32_t maxAllocs = 4096) : m_maxAllocs(maxAllocs)
+    Allocator(uint32_t maxAllocs = 4096)
+        : m_maxAllocs(maxAllocs)
     {
         m_backBuffer = VirtualAlloc((LPVOID)TERABYTES(4), GIGABYTES(4), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
         if (!m_backBuffer) {
             puts("VirtualAlloc failed!");
         }
 
-        memset(m_l2Bitmasks, 0, TOTAL_BIN_COUNT);
+        memset(m_l2Bitmasks, 0, sizeof(uint8_t) * L2_BITMASK_COUNT);
         /* all freelist head_ptrs are NULLPTR's */
         memset(m_freelistHeads, 0xff, TOTAL_BIN_COUNT*sizeof(NodePtr_t));
 
@@ -418,42 +443,16 @@ class Allocator
         }
         m_emptyNodeStackTop = m_maxAllocs - 1;
 
-        /**
-         ** Insert the one free block which contains the whole size this allocator is managing.
-         * IMPORTANT: the last 3 bits of l1 bitmask is unused since the minimum memory allocated
-         * is 8 bytes. That is why even though the total memory that is being managed is 4GBs(2^32), the l1 index
-         * here is selected to be 28 rather than 31(which would have been apt for size 4GBs).
-         */
-        /// l1 size range is [2^28, 2^29-1]
-        constexpr uint32_t l1_index = 28;
-        m_l1Bitmask = 1 << l1_index;
-        /// l2 index is 7. the l1 range is subdivided into 8 distinct size classes. so, 2^28/8=2^25
-        /// so the size is 2^28 + 7*2^25. This is the position where we store the 4GB block because the first 3
-        /// bits of the l1 bitmask is unused in this implementation since the minimum memory allocated is 8 bytes.
-        constexpr uint32_t l2_index = 7;
-        /// each l1 level is subdivided into 8. so the correct bitmask is l1*8 to get to the correct one.
-        /// setting bit 7 of this l2 bitmask because all the memory at the beginning is in this singular
-        /// freeblock.
-        m_l2Bitmasks[l1_index << L2_LOG2_BINCOUNT] = 1 << l2_index;
-
-        uint32_t freeNodeIndex = getFreenodeIndex();
-        /// 4 GB is 2^32 bytes.
-        m_nodes[freeNodeIndex].size = GIGABYTES(4)-1;
-
-        // (l1_index * 8) + l2_index; -> 28*8 + 7. This is the place where we store the 4GB freeblock since the
-        // last 3 bits(bit 31,30,29) of the l1 bitmask are unused.
-        constexpr uint32_t freelistIndex = 231;
-        assert(m_freelistHeads[freelistIndex] == NULLPTR); // the freelist is empty in the beginning.
-        m_freelistHeads[freelistIndex] = freeNodeIndex;
+        insertNode(GIGABYTES(4)-1, 0);
     }
 
   private:
     void *m_backBuffer;
 
     /* 32 bits where each bit corresponds to one lvl-1 bin. */
-    uint32_t m_l1Bitmask;
+    uint32_t m_l1Bitmask = 0u;
     /* each lvl-2 bin has length=8. 1 bit for each so uint8_t */
-    uint8_t  m_l2Bitmasks[TOTAL_BIN_COUNT];
+    uint8_t  m_l2Bitmasks[L2_BITMASK_COUNT];
     NodePtr_t  m_freelistHeads[TOTAL_BIN_COUNT];
 
     uint32_t m_maxAllocs;
