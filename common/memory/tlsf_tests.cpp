@@ -1,5 +1,5 @@
-#include "tlsf.h"
 #define TLSF_INCLUDE_TESTS
+#include "tlsf.h"
 
 #ifdef TLSF_INCLUDE_TESTS
 
