@@ -4,7 +4,6 @@
 #include <iostream>
 #include <memoryapi.h>
 
-
 namespace Tlsf
 {
 
@@ -93,10 +92,11 @@ Allocator::findSuitableFreelist(uint32_t &l1Index, uint32_t &l2Index, uint32_t &
     uint32_t mask = 1u << l1Index;
     if ((m_l1Bitmask & mask) == 0)
     {
-higher_l1_bin:
+    higher_l1_bin:
         uint32_t b = m_l1Bitmask >> (l1Index + 1);
 
-        if (!b) {
+        if (!b)
+        {
             assert(!"INVALID_INDEX");
             freelistIndex = INVALID_INDEX;
             return;
@@ -111,7 +111,8 @@ higher_l1_bin:
     if ((l2Mask & (static_cast<uint8_t>(1) << l2Index)) == 0)
     {
         uint32_t b = l2Mask >> (l2Index + 1);
-        if (b == 0) {
+        if (b == 0)
+        {
             goto higher_l1_bin;
         }
         uint32_t i = lsbIndex(b) + 1;
@@ -178,14 +179,16 @@ Allocator::removeNode(uint32_t nodeIndex)
             uint32_t l1Index = index >> L2_LOG2_BINCOUNT;
             uint32_t l2Index = index & L2_MASK;
             m_l2Bitmasks[l1Index] &= ~(1 << l2Index);
-            if (m_l2Bitmasks[l1Index] == 0) {
+            if (m_l2Bitmasks[l1Index] == 0)
+            {
                 m_l1Bitmask &= ~(1 << l1Index);
             }
         }
     }
     else
     {
-        if (node.next != NULLPTR) {
+        if (node.next != NULLPTR)
+        {
             m_nodes[node.next].prev = node.prev;
         }
         m_nodes[node.prev].next = node.next;
@@ -209,8 +212,14 @@ Allocator::removeNode(uint32_t nodeIndex)
 Allocation
 Allocator::allocate(uint32_t size)
 {
-    if (size == 0) { assert(!"Size 0 is like free!"); }
-    if (size < MIN_SIZE_ALLOWED) { size = MIN_SIZE_ALLOWED; }
+    if (size == 0)
+    {
+        assert(!"Size 0 is like free!");
+    }
+    if (size < MIN_SIZE_ALLOWED)
+    {
+        size = MIN_SIZE_ALLOWED;
+    }
 
     std::cout << "***********  Allocating " << size << " bytes.  **********\n";
 
@@ -220,7 +229,9 @@ Allocator::allocate(uint32_t size)
 
     uint32_t freelistIndex = INVALID_INDEX;
     findSuitableFreelist(l1Index, l2Index, freelistIndex);
-    if (freelistIndex == INVALID_INDEX) {
+
+    if (freelistIndex == INVALID_INDEX)
+    {
         assert(!"No memory left");
     }
 
@@ -238,7 +249,8 @@ Allocator::allocate(uint32_t size)
     else
     {
         m_l2Bitmasks[l1Index] &= ~(1 << l2Index);
-        if (m_l2Bitmasks[l1Index] == 0) {
+        if (m_l2Bitmasks[l1Index] == 0)
+        {
             m_l1Bitmask &= ~(1 << l1Index);
         }
     }
@@ -278,7 +290,8 @@ Allocator::free(Allocation allocation)
               << allocation.offset << " *********\n";
 
     Node &nodeToFree = m_nodes[allocation.nodeIndex];
-    if (!nodeToFree.allocated) {
+    if (!nodeToFree.allocated)
+    {
         assert(!"Double Free? or a valid allocated node was not marked as allocated.");
         return;
     }
@@ -294,7 +307,8 @@ Allocator::free(Allocation allocation)
         nodeToFree.offset = prevFreeNeighbor.offset;
 
         nodeToFree.aoPrevious = prevFreeNeighbor.aoPrevious;
-        if (nodeToFree.aoPrevious != INVALID_INDEX) {
+        if (nodeToFree.aoPrevious != INVALID_INDEX)
+        {
             m_nodes[nodeToFree.aoPrevious].aoNext = allocation.nodeIndex;
         }
     }
@@ -310,7 +324,8 @@ Allocator::free(Allocation allocation)
         assert(nextFreeNeighbor.offset > m_nodes[allocation.nodeIndex].offset);
 
         nodeToFree.aoNext = nextFreeNeighbor.aoNext;
-        if (nodeToFree.aoNext != INVALID_INDEX) {
+        if (nodeToFree.aoNext != INVALID_INDEX)
+        {
             m_nodes[nodeToFree.aoNext].aoPrevious = allocation.nodeIndex;
         }
     }
@@ -361,14 +376,12 @@ Allocator::validate() const
     std::cout << "----------------------------------------------------------------\n";
 }
 
-Allocator::Allocator(uint32_t maxAllocs)
-    : m_maxAllocs(maxAllocs)
+Allocator::Allocator(uint32_t maxAllocs) : m_maxAllocs(maxAllocs)
 {
     m_backBuffer = VirtualAlloc((LPVOID)TERABYTES(4), GIGABYTES(4), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!m_backBuffer)
     {
         puts("VirtualAlloc failed!");
-
     }
 
     memset(m_l2Bitmasks, 0, sizeof(uint8_t) * L2_BITMASK_COUNT);
@@ -377,7 +390,8 @@ Allocator::Allocator(uint32_t maxAllocs)
     m_nodes = new Node[m_maxAllocs];
     m_emptyNodeStack = new uint32_t[m_maxAllocs];
 
-    for (uint32_t i = 0; i < m_maxAllocs; ++i) {
+    for (uint32_t i = 0; i < m_maxAllocs; ++i)
+    {
         m_emptyNodeStack[i] = m_maxAllocs - i - 1;
     }
     m_emptyNodeStackTop = m_maxAllocs - 1;
@@ -392,4 +406,4 @@ Allocator::~Allocator()
     delete[] m_nodes;
     delete[] m_emptyNodeStack;
 }
-}
+} // namespace Tlsf
