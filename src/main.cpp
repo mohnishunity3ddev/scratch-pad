@@ -55,8 +55,7 @@
 
 int main(int argc, char **argv)
 {
-
-    Tlsf::tests();
+    Tlsf::Testing::runAllTests();
 
     /*
     Tlsf::Allocator allocator;

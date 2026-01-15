@@ -1,10 +1,13 @@
 #include "tlsf.h"
 #include "memory.h"
 #include <cstring>
+#include <iostream>
+#include <memoryapi.h>
+
 
 namespace Tlsf
 {
-/* returns the bit position of the most significant bit which is set. Floor(Log2(mask)) */
+
 inline uint32_t
 Allocator::msbIndex(uint32_t mask)
 {
@@ -15,7 +18,6 @@ Allocator::msbIndex(uint32_t mask)
     return result;
 }
 
-/* returns the bit position of the least significant bit which is set. */
 inline uint32_t
 Allocator::lsbIndex(uint32_t mask)
 {
@@ -34,7 +36,7 @@ Allocator::indexRounddown(uint32_t size)
     uint32_t l1Index = msbIndex(size);
     assert(l1Index >= 3 && l1Index < L1_BIN_COUNT);
 
-    uint32_t diff = size - (1 << l1Index);
+    uint32_t diff = size - (1u << l1Index);
     uint32_t l2Index = (diff >> (l1Index - L2_LOG2_BINCOUNT));
     assert(l2Index < L2_BIN_COUNT);
 
@@ -51,12 +53,12 @@ Allocator::indexRoundup(uint32_t size)
     assert(size >= 8);
 
     /* round-up NOTE: We are snapping size to the next TLSF bucket boundary. */
-    size += (1 << (msbIndex(size) - L2_LOG2_BINCOUNT)) - 1;
+    uint32_t sz = size + ((1 << (msbIndex(size) - L2_LOG2_BINCOUNT)) - 1);
 
-    uint32_t l1Index = msbIndex(size); // floor(log2(size))
+    uint32_t l1Index = msbIndex(sz); // floor(log2(sz))
     assert(l1Index >= 3 && l1Index < L1_BIN_COUNT);
 
-    uint32_t diff = size - (1 << l1Index);
+    uint32_t diff = sz - (1 << l1Index);
     uint32_t l2Index = (diff >> (l1Index - L2_LOG2_BINCOUNT));
     assert(l2Index < L2_BIN_COUNT);
 
@@ -70,16 +72,16 @@ Allocator::indexRoundup(uint32_t size)
 inline uint32_t
 Allocator::getFreenodeIndex()
 {
-    uint32_t freeNodeIndex = m_emptyNodeStack[m_emptyNodeStackTop--];
-    if (m_emptyNodeStackTop < 0)
+    if (m_emptyNodeStackTop == 0)
     {
-        assert(!"All freenodes have been consumed!");
+        assert(!"All freenodes have been consumed`!");
     }
+    uint32_t freeNodeIndex = m_emptyNodeStack[m_emptyNodeStackTop--];
     return freeNodeIndex;
 }
 
 inline void
-Allocator::addFreenode(uint32_t nodeIndex)
+Allocator::addNodeToStore(uint32_t nodeIndex)
 {
     assert(m_emptyNodeStackTop < m_maxAllocs - 1);
     m_emptyNodeStack[++m_emptyNodeStackTop] = nodeIndex;
@@ -91,10 +93,10 @@ Allocator::findSuitableFreelist(uint32_t &l1Index, uint32_t &l2Index, uint32_t &
     uint32_t mask = 1u << l1Index;
     if ((m_l1Bitmask & mask) == 0)
     {
+higher_l1_bin:
         uint32_t b = m_l1Bitmask >> (l1Index + 1);
 
-        if (!b)
-        {
+        if (!b) {
             assert(!"INVALID_INDEX");
             freelistIndex = INVALID_INDEX;
             return;
@@ -106,14 +108,11 @@ Allocator::findSuitableFreelist(uint32_t &l1Index, uint32_t &l2Index, uint32_t &
     }
 
     uint8_t l2Mask = m_l2Bitmasks[l1Index];
-    if ((l2Mask & (1u << l2Index)) == 0)
+    if ((l2Mask & (static_cast<uint8_t>(1) << l2Index)) == 0)
     {
         uint32_t b = l2Mask >> (l2Index + 1);
-        if (b == 0)
-        {
-            assert(!"Invalid Path. l2Mask should not be zero with l1 range being set above.");
-            freelistIndex = INVALID_INDEX;
-            return;
+        if (b == 0) {
+            goto higher_l1_bin;
         }
         uint32_t i = lsbIndex(b) + 1;
         l2Index += i;
@@ -158,15 +157,19 @@ void
 Allocator::removeNode(uint32_t nodeIndex)
 {
     Node &node = m_nodes[nodeIndex];
+    /// NOTE: nodes with offset = NULLPTR are supposed to be invalid and already present in the empty node stack.
+    assert(!node.allocated && node.offset != NULLPTR &&
+           "this function is meant to remove only non-allocated free nodes.");
 
     uint32_t index = indexRounddown(node.size);
     if (node.prev == NULLPTR)
     {
+        /// It is the first node its freelist.
+        assert(m_freelistHeads[index] == nodeIndex);
         if (node.next != NULLPTR)
         {
             m_nodes[node.next].prev = NULLPTR;
             m_freelistHeads[index] = node.next;
-
             node.next = NULLPTR;
         }
         else
@@ -182,8 +185,7 @@ Allocator::removeNode(uint32_t nodeIndex)
     }
     else
     {
-        if (node.next != NULLPTR)
-        {
+        if (node.next != NULLPTR) {
             m_nodes[node.next].prev = node.prev;
         }
         m_nodes[node.prev].next = node.next;
@@ -191,6 +193,16 @@ Allocator::removeNode(uint32_t nodeIndex)
         node.prev = NULLPTR;
     }
 
+    /// Reset the node before returning it.
+    node.offset = INVALID_INDEX;
+    node.size = 0;
+    node.next = NULLPTR;
+    node.prev = NULLPTR;
+    node.aoPrevious = NULLPTR;
+    node.aoNext = NULLPTR;
+    node.allocated = false;
+
+    /// Return the node to the freestore.
     m_emptyNodeStack[++m_emptyNodeStackTop] = nodeIndex;
 }
 
@@ -199,6 +211,8 @@ Allocator::allocate(uint32_t size)
 {
     if (size == 0) { assert(!"Size 0 is like free!"); }
     if (size < MIN_SIZE_ALLOWED) { size = MIN_SIZE_ALLOWED; }
+
+    std::cout << "***********  Allocating " << size << " bytes.  **********\n";
 
     uint32_t candidateFreelistIndex = indexRoundup(size);
     uint32_t l1Index = candidateFreelistIndex >> L2_LOG2_BINCOUNT;
@@ -211,11 +225,11 @@ Allocator::allocate(uint32_t size)
     }
 
     NodePtr_t headNodeIndex = m_freelistHeads[freelistIndex];
-    assert(headNodeIndex != INVALID_INDEX && headNodeIndex < TOTAL_BIN_COUNT);
-    Node *headNode = m_nodes + headNodeIndex;
-    assert(headNode->size >= size);
+    assert(headNodeIndex != INVALID_INDEX && headNodeIndex < m_maxAllocs);
+    Node &headNode = m_nodes[headNodeIndex];
+    assert(headNode.size >= size && !headNode.allocated);
 
-    NodePtr_t nextNodeIndex = headNode->next;
+    NodePtr_t nextNodeIndex = headNode.next;
     m_freelistHeads[freelistIndex] = nextNodeIndex;
     if (nextNodeIndex != NULLPTR)
     {
@@ -229,88 +243,132 @@ Allocator::allocate(uint32_t size)
         }
     }
 
-    assert(headNode->size >= size);
-    uint32_t remainingSize = headNode->size - size;
+    assert(headNode.size >= size);
+    uint32_t remainingSize = headNode.size - size;
 
     if (remainingSize >= MIN_SIZE_ALLOWED)
     {
-        uint32_t newNodeIndex = insertNode(remainingSize, headNode->offset + size);
+        uint32_t newNodeIndex = insertNode(remainingSize, headNode.offset + size);
 
-        assert(headNode->size > size);
-        headNode->size -= remainingSize;
+        assert(headNode.size > size);
+        headNode.size -= remainingSize;
 
         Node &newNode = m_nodes[newNodeIndex];
-        if (headNode->aoNext != NULLPTR)
+        if (headNode.aoNext != NULLPTR)
         {
-            m_nodes[headNode->aoNext].aoPrevious = newNodeIndex;
+            m_nodes[headNode.aoNext].aoPrevious = newNodeIndex;
         }
 
         newNode.aoPrevious = headNodeIndex;
-        newNode.aoNext = headNode->aoNext;
-        
-        headNode->aoNext = newNodeIndex;
+        newNode.aoNext = headNode.aoNext;
+
+        headNode.aoNext = newNodeIndex;
     }
 
-    headNode->allocated = true;
-    return {.offset = headNode->offset, .nodeIndex = headNodeIndex};
+    headNode.allocated = true;
+    validate();
+    return {.offset = headNode.offset, .nodeIndex = headNodeIndex};
 }
 
 void
 Allocator::free(Allocation allocation)
 {
+    assert(allocation.nodeIndex != INVALID_INDEX);
+    std::cout << "***********  Freeing " << m_nodes[allocation.nodeIndex].size << " bytes at offset "
+              << allocation.offset << " *********\n";
 
-    Node &currentNode = m_nodes[allocation.nodeIndex];
-    if (!currentNode.allocated)
-    {
+    Node &nodeToFree = m_nodes[allocation.nodeIndex];
+    if (!nodeToFree.allocated) {
         assert(!"Double Free? or a valid allocated node was not marked as allocated.");
         return;
     }
 
-    if (currentNode.aoPrevious != NULLPTR && !m_nodes[currentNode.aoPrevious].allocated)
+    if (nodeToFree.aoPrevious != NULLPTR && !m_nodes[nodeToFree.aoPrevious].allocated)
     {
-        removeNode(currentNode.aoPrevious);
+        Node prevFreeNeighbor = m_nodes[nodeToFree.aoPrevious];
+        removeNode(nodeToFree.aoPrevious);
 
-        Node &prevNode = m_nodes[currentNode.aoPrevious];
-        currentNode.size += prevNode.size;
+        nodeToFree.size += prevFreeNeighbor.size;
 
-        assert(prevNode.offset < m_nodes[allocation.nodeIndex].offset);
-        currentNode.offset = prevNode.offset;
+        assert(prevFreeNeighbor.offset < m_nodes[allocation.nodeIndex].offset);
+        nodeToFree.offset = prevFreeNeighbor.offset;
 
-        currentNode.aoPrevious = prevNode.aoPrevious;
+        nodeToFree.aoPrevious = prevFreeNeighbor.aoPrevious;
+        if (nodeToFree.aoPrevious != INVALID_INDEX) {
+            m_nodes[nodeToFree.aoPrevious].aoNext = allocation.nodeIndex;
+        }
     }
 
-    if (currentNode.aoNext != NULLPTR && !m_nodes[currentNode.aoNext].allocated)
+    if (nodeToFree.aoNext != NULLPTR && !m_nodes[nodeToFree.aoNext].allocated)
     {
-        removeNode(currentNode.aoNext);
+        /// cache the next node
+        Node nextFreeNeighbor = m_nodes[nodeToFree.aoNext];
+        /// remove
+        removeNode(nodeToFree.aoNext);
 
-        Node &nextNode = m_nodes[currentNode.aoNext];
-        currentNode.size += nextNode.size;
-        assert(nextNode.offset < m_nodes[allocation.nodeIndex].offset);
+        nodeToFree.size += nextFreeNeighbor.size;
+        assert(nextFreeNeighbor.offset > m_nodes[allocation.nodeIndex].offset);
 
-        currentNode.aoNext = nextNode.aoNext;
+        nodeToFree.aoNext = nextFreeNeighbor.aoNext;
+        if (nodeToFree.aoNext != INVALID_INDEX) {
+            m_nodes[nodeToFree.aoNext].aoPrevious = allocation.nodeIndex;
+        }
     }
 
-    uint32_t aoPreviousCached = currentNode.aoPrevious;
-    uint32_t aoNextCached = currentNode.aoNext;
+    NodePtr_t p = nodeToFree.aoPrevious;
+    NodePtr_t n = nodeToFree.aoNext;
 
-    m_emptyNodeStack[++m_emptyNodeStackTop] = allocation.nodeIndex;
+    addNodeToStore(allocation.nodeIndex);
+    uint32_t insertedNodeIndex = insertNode(nodeToFree.size, nodeToFree.offset);
 
-    uint32_t insertedNodeIndex = insertNode(currentNode.size, currentNode.offset);
+    m_nodes[insertedNodeIndex].aoPrevious = p;
+    m_nodes[insertedNodeIndex].aoNext = n;
+    m_nodes[insertedNodeIndex].allocated = false;
 
-    assert(allocation.nodeIndex == insertedNodeIndex);
-
-    // TODO: insertNode() should return the same node from the stack that we pushed. So aoNext and aoPrev
-    //       should be the same now as well.
-    assert(m_nodes[insertedNodeIndex].aoPrevious == aoPreviousCached &&
-           m_nodes[insertedNodeIndex].aoNext == aoNextCached);
+    validate();
 }
 
-Allocator::Allocator(uint32_t maxAllocs) : m_maxAllocs(maxAllocs)
+void
+Allocator::validate() const
+{
+    uint32_t numAllocs = 0, numFrees = 0;
+    std::cout << "----------------------------------------------------------------\n";
+    std::cout << "[ALLOCATIONS]: \n";
+    for (uint32_t nodeIndex = 0, count = 0; nodeIndex < m_maxAllocs; ++nodeIndex)
+    {
+        const Node &node = m_nodes[nodeIndex];
+        if (node.offset != INVALID_INDEX && node.allocated)
+        {
+            numAllocs++;
+            ++count;
+            std::cout << count << ") offset: " << node.offset << ", size: " << node.size
+                      << ", nodeIndex: " << nodeIndex << "\n";
+
+            if (node.aoNext != NULLPTR && m_nodes[node.aoNext].offset != NULLPTR)
+            {
+                assert(m_nodes[node.aoNext].aoPrevious == nodeIndex);
+                assert(node.offset + node.size == m_nodes[node.aoNext].offset);
+            }
+            if (node.aoPrevious != NULLPTR && m_nodes[node.aoPrevious].offset != NULLPTR)
+            {
+                assert(m_nodes[node.aoPrevious].aoNext == nodeIndex);
+                assert(m_nodes[node.aoPrevious].offset + m_nodes[node.aoPrevious].size == node.offset);
+            }
+        }
+    }
+
+    std::cout << "[VALIDATE]: numAllocs = " << numAllocs << "; numFrees = " << numFrees << "\n";
+    std::cout << "----------------------------------------------------------------\n";
+}
+
+Allocator::Allocator(uint32_t maxAllocs)
+    : m_maxAllocs(maxAllocs)
 {
     m_backBuffer = VirtualAlloc((LPVOID)TERABYTES(4), GIGABYTES(4), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!m_backBuffer)
     {
         puts("VirtualAlloc failed!");
+
     }
 
     memset(m_l2Bitmasks, 0, sizeof(uint8_t) * L2_BITMASK_COUNT);
@@ -319,8 +377,7 @@ Allocator::Allocator(uint32_t maxAllocs) : m_maxAllocs(maxAllocs)
     m_nodes = new Node[m_maxAllocs];
     m_emptyNodeStack = new uint32_t[m_maxAllocs];
 
-    for (uint32_t i = 0; i < m_maxAllocs; ++i)
-    {
+    for (uint32_t i = 0; i < m_maxAllocs; ++i) {
         m_emptyNodeStack[i] = m_maxAllocs - i - 1;
     }
     m_emptyNodeStackTop = m_maxAllocs - 1;
@@ -328,4 +385,11 @@ Allocator::Allocator(uint32_t maxAllocs) : m_maxAllocs(maxAllocs)
     insertNode(GIGABYTES(4) - 1, 0);
 }
 
+Allocator::~Allocator()
+{
+    assert(m_backBuffer != nullptr);
+    VirtualFree(m_backBuffer, 0, MEM_RELEASE);
+    delete[] m_nodes;
+    delete[] m_emptyNodeStack;
+}
 }
